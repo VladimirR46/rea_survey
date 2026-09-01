@@ -11,6 +11,7 @@ services:
       # база в папке проекта, переживает пересоздание контейнера
       - ./data:/data
     environment:
+      SCRIPT_NAME: /survey
       # Ключ подписи кук сессий. Новый: python3 -c "import secrets; print(secrets.token_hex(32))"
       SECRET_KEY: cccfcc8154d569890300ba0ac84b449f6416b37879c0e442fd03ddb533c85ff5
       # Сколько дней респондент может вернуться и продолжить с того же места

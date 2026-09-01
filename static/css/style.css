@@ -226,9 +226,6 @@ body:has(.compare) .footer { margin: 0; }
 /* последняя строка без нижней границы — экономит пиксель и выглядит чище */
 .compare > *:nth-last-child(-n+3) { border-bottom: none; }
 
-/* Название характеристики внутри карточки — только для мобильного */
-.cmp-mobile-attr { display: none; }
-
 /* Блок выбора: заголовок слева, три варианта в один ряд */
 .choice-block {
     display: flex;
@@ -278,51 +275,59 @@ body:has(.compare) .error {
     font-size: calc(13px * var(--fit));
 }
 
-/* ── Мобильная версия: две карточки одна под другой ── */
+/* ── Мобильная версия ──
+   Две узкие колонки: название характеристики строкой во всю ширину,
+   под ней два значения рядом. Раскладывать профили друг под другом нельзя:
+   в задании на выбор человек должен сравнивать их глазами, а не по памяти. */
 @media (max-width: 780px) {
-    body:has(.compare) .page { padding: 16px 14px 40px; }
+    body:has(.compare) .page { padding: 16px 12px 40px; }
 
     .compare {
-        display: block;
-        border: none;
-        background: none;
-        margin-bottom: 18px;
+        grid-template-columns: 1fr 1fr;
+        /* именно clip, а не hidden: hidden создаёт контейнер прокрутки
+           и ломает прилипающую шапку */
+        overflow: clip;
+        margin-bottom: 16px;
     }
 
-    /* шапка и колонка названий не нужны: названия уйдут в карточки */
-    .cmp-head, .cmp-attr { display: none; }
+    /* колонка с названиями исчезает, её роль берут строки-заголовки */
+    .cmp-col-attr { display: none; }
+
+    .cmp-head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 9px 10px;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .cmp-attr {
+        grid-column: 1 / -1;          /* во всю ширину, над обоими значениями */
+        padding: 10px 10px 5px;
+        font-size: 12px;
+        line-height: 1.35;
+        background: #f7f8fa;
+        border-bottom: none;
+    }
 
     .cmp-cell {
-        border: none;
-        padding: 12px 16px;
-        font-size: 15px;
-        line-height: 1.5;
-        background: #fff;
-    }
-
-    /* карточки собираются из ячеек одной колонки */
-    .cmp-col-1 { border-left: 3px solid var(--accent); }
-    .cmp-col-2 { border-left: 3px solid #8a8a8a; }
-
-    /* заголовок продукта перед первой ячейкой каждой колонки */
-    .cmp-col-1:nth-of-type(4)::before { content: "ИИ-продукт 1"; }
-    .cmp-col-2:nth-of-type(5)::before { content: "ИИ-продукт 2"; }
-
-    .cmp-mobile-attr {
-        display: block;
+        padding: 7px 10px 11px;
         font-size: 13px;
-        color: var(--muted);
-        margin-bottom: 3px;
+        line-height: 1.4;
     }
 
-    .cmp-value { display: block; }
+    /* разделитель нужен только между двумя значениями */
+    .cmp-cell.cmp-col-1 { border-left: none; }
 
-    /* на телефоне варианты выбора снова в столбик */
-    .choice-block { display: block; padding: 16px; }
-    .choice-title { margin-bottom: 12px; }
+    .task-title { font-size: 18px; line-height: 1.3; margin-bottom: 10px; }
+    .task-intro { font-size: 13px; margin-bottom: 14px; }
+
+    /* варианты выбора возвращаются в столбик */
+    .choice-block { display: block; padding: 14px; }
+    .choice-title { font-size: 15px; margin-bottom: 10px; }
     .choice-row { display: flex; flex-direction: column; gap: 10px; }
-    .choice-block .option { padding: 14px 16px; font-size: 16px; }
+    .choice-block .option { padding: 13px 14px; font-size: 15px; }
 
-    .task-title { font-size: 19px; margin-bottom: 14px; }
-    .task-intro { font-size: 14px; margin-bottom: 18px; }
+    body:has(.compare) .btn-primary { padding: 14px 24px; font-size: 16px; }
 }
