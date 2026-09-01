@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # код с диска: после git pull сервер подхватит правки сам,
+      # пересборка нужна только при изменении requirements.txt
+      - ./:/app
+      # база в папке проекта, переживает пересоздание контейнера
+      - ./data:/data
+    environment:
+      # Ключ подписи кук сессий. Новый: python3 -c "import secrets; print(secrets.token_hex(32))"
+      SECRET_KEY: cccfcc8154d569890300ba0ac84b449f6416b37879c0e442fd03ddb533c85ff5
+      # Сколько дней респондент может вернуться и продолжить с того же места
+      SESSION_DAYS: 14
+      # Параметры опроса
+      DESIGN_MODE: individual
+      N_TASKS: 12
+      DESIGN_SEED: 20260901
+    # --threads обязателен. Без него gunicorn обрабатывает по одному
+    # соединению за раз: браузер открывает соединения заранее, ничего в них
+    # не отправляя, и один такой пустой сокет останавливает весь сервер.
+    command: gunicorn --bind 0.0.0.0:8000 --worker-class gthread --threads 32 --reload app:app

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Вопрос {{ pos }}{% endblock %}
+
+{% block content %}
+    <div class="progress">Вопрос {{ pos }} из {{ total }}</div>
+
+    <h1 class="question-text">{{ question.text }}</h1>
+
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('survey_submit', idx=idx) }}">
+        <div class="options">
+            {% for opt in question.options %}
+                <!-- вся плашка — это label, поэтому кликается целиком -->
+                <label class="option">
+                    <input type="radio" name="value" value="{{ opt.value }}"
+                           {% if selected == opt.value %}checked{% endif %} required>
+                    <span class="option-body">
+                        <span class="option-label">{{ opt.label }}</span>
+                        {% if opt.hint %}<span class="option-hint">{{ opt.hint }}</span>{% endif %}
+                    </span>
+                </label>
+            {% endfor %}
+        </div>
+
+        <div class="nav">
+            {% if has_prev %}
+                <!-- formnovalidate: назад не требует выбранного варианта -->
+                <button type="submit" name="action" value="back"
+                        class="btn-secondary" formnovalidate>Назад</button>
+            {% endif %}
+            <button type="submit" class="btn-primary">Далее</button>
+        </div>
+    </form>
+{% endblock %}

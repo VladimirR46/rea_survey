@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Информированное согласие{% endblock %}
+
+{% block content %}
+    <h1>Информированное согласие</h1>
+
+    <div class="consent-text">
+        {% include "content/consent.html" %}
+    </div>
+
+    <!-- POST, а не ссылка: согласие — это действие, его нужно зафиксировать -->
+    <form method="post" action="{{ url_for('start') }}">
+        <button type="submit" class="btn-primary">
+            Я согласен(на) принять участие
+        </button>
+    </form>
+{% endblock %}

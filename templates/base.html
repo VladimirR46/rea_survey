@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- обязательно для корректного вида на телефонах -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Опрос{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="page">
+    <header class="header">РЭУ им. Г.В. Плеханова</header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        {% block footer %}{% endblock %}
+    </footer>
+</div>
+</body>
+</html>

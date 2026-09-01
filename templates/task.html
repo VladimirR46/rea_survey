@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Выбор {{ pos }}{% endblock %}
+
+{% block content %}
+    <div class="progress">
+        <div class="progress-text">Ситуация {{ pos }} из {{ total }}</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ (pos / total * 100)|round }}%"></div>
+        </div>
+    </div>
+
+    <h1 class="task-title">
+        Какую из представленных ИИ-систем, на ваш взгляд, предпочтительнее
+        внедрить в медицинской организации?
+    </h1>
+
+    <div class="task-intro">
+        <p>Представьте, что обе системы прошли необходимые проверки,
+        соответствуют установленным требованиям и доступны для применения
+        в вашей медицинской организации. Пожалуйста, сравните характеристики
+        систем и выберите один вариант.</p>
+
+        <p>Предположите, что затраты медицинской организации на приобретение,
+        внедрение и использование обеих систем одинаковы. Все остальные
+        характеристики, не указанные в таблице, также не различаются.</p>
+    </div>
+
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('task_submit', idx=idx) }}" id="task-form">
+        <!-- заполняется скриптом внизу страницы -->
+        <input type="hidden" name="dwell_ms" id="dwell_ms" value="0">
+
+        <div class="compare">
+            <!-- Шапка: на мобильном скрывается, названия уходят внутрь карточек -->
+            <div class="cmp-head cmp-col-attr">Характеристики</div>
+            <div class="cmp-head cmp-col-1">ИИ-продукт 1</div>
+            <div class="cmp-head cmp-col-2">ИИ-продукт 2</div>
+
+            {% for row in rows %}
+                <div class="cmp-attr">{{ row.name }}</div>
+
+                <div class="cmp-cell cmp-col-1">
+                    <span class="cmp-mobile-attr">{{ row.name }}</span>
+                    <span class="cmp-value">
+                        {% if row.left.detail %}
+                            <b>{{ row.left.label }}:</b> {{ row.left.detail }}
+                        {% else %}
+                            {{ row.left.label }}
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="cmp-cell cmp-col-2">
+                    <span class="cmp-mobile-attr">{{ row.name }}</span>
+                    <span class="cmp-value">
+                        {% if row.right.detail %}
+                            <b>{{ row.right.label }}:</b> {{ row.right.detail }}
+                        {% else %}
+                            {{ row.right.label }}
+                        {% endif %}
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="choice-block">
+            <div class="choice-title">Ваш выбор:</div>
+
+            <!-- три варианта в один ряд: экономит высоту экрана,
+                 на телефоне CSS возвращает их в столбик -->
+            <div class="choice-row">
+                <label class="option">
+                    <input type="radio" name="choice" value="left" required>
+                    <span class="option-body">ИИ-продукт 1</span>
+                </label>
+
+                <label class="option">
+                    <input type="radio" name="choice" value="right" required>
+                    <span class="option-body">ИИ-продукт 2</span>
+                </label>
+
+                <label class="option">
+                    <input type="radio" name="choice" value="none" required>
+                    <span class="option-body">Ни одну из систем</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="nav">
+            <button type="submit" class="btn-primary">Далее</button>
+        </div>
+    </form>
+
+    <script>
+        // Подгонка под высоту окна: если задание не поместилось,
+        // постепенно уменьшаем коэффициент --fit, от которого зависят
+        // все вертикальные размеры страницы выбора.
+        (function () {
+            var root = document.documentElement;
+
+            function fit() {
+                // на телефоне прокрутка нормальна — не трогаем
+                if (window.innerWidth < 800) {
+                    root.style.setProperty("--fit", "1");
+                    return;
+                }
+                var f = 1;
+                root.style.setProperty("--fit", "1");
+                // scrollHeight читается на каждом шаге, это заставляет
+                // браузер пересчитать раскладку с новым коэффициентом
+                while (document.body.scrollHeight > window.innerHeight && f > 0.7) {
+                    f -= 0.02;
+                    root.style.setProperty("--fit", f.toFixed(2));
+                }
+            }
+
+            fit();
+            window.addEventListener("resize", fit);
+            // шрифты подгружаются позже разметки и могут изменить высоту
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(fit);
+            }
+        })();
+
+        // Активное время на странице: пауза, когда вкладка в фоне.
+        // Даёт более честную оценку, чем разница shown_at и answered_at
+        (function () {
+            let elapsed = 0;
+            let last = document.hidden ? null : Date.now();
+
+            document.addEventListener("visibilitychange", function () {
+                if (document.hidden) {
+                    if (last !== null) { elapsed += Date.now() - last; last = null; }
+                } else {
+                    last = Date.now();
+                }
+            });
+
+            document.getElementById("task-form").addEventListener("submit", function () {
+                if (last !== null) elapsed += Date.now() - last;
+                document.getElementById("dwell_ms").value = elapsed;
+            });
+        })();
+    </script>
+{% endblock %}

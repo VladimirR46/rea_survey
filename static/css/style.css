@@ -1,0 +1,328 @@
+:root {
+    --text: #1a1a1a;
+    --muted: #666;
+    --border: #d5d5d5;
+    --accent: #1e5aa8;
+    --bg: #fafafa;
+    /* Масштаб страницы выбора. Скрипт в task.html уменьшает его,
+       если содержимое всё же не влезло в окно */
+    --fit: 1;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+}
+
+/* Ограничиваем ширину: длинные строки текста читать тяжело */
+.page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.header {
+    color: var(--muted);
+    font-size: 14px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+}
+
+h1 { font-size: 24px; font-weight: 600; margin: 0 0 24px; }
+
+.consent-text {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 24px 20px;
+    margin-bottom: 32px;
+}
+
+.consent-text p { margin: 16px 0; }
+
+.btn-primary {
+    display: block;
+    width: 100%;
+    padding: 16px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 17px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.btn-primary:hover { background: #17457f; }
+
+.footer {
+    margin-top: 40px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+/* На узких экранах убираем лишние отступы */
+@media (max-width: 600px) {
+    .page { padding: 16px 14px 40px; }
+    .consent-text { padding: 4px 16px 16px; }
+}
+
+.progress {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+
+.question-text {
+    font-size: 20px;
+    line-height: 1.45;
+    margin: 0 0 24px;
+}
+
+.options { display: flex; flex-direction: column; gap: 10px; }
+
+.option {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    cursor: pointer;
+}
+
+.option:hover { border-color: var(--accent); }
+
+/* подсветка выбранного варианта: :has() поддерживают все актуальные браузеры */
+.option:has(input:checked) {
+    border-color: var(--accent);
+    background: #f2f6fc;
+}
+
+.option input { margin-top: 4px; flex-shrink: 0; }
+.option-body { display: flex; flex-direction: column; gap: 4px; }
+.option-label { font-weight: 500; }
+.option-hint { font-size: 15px; color: var(--muted); line-height: 1.5; }
+
+.nav { display: flex; gap: 12px; margin-top: 28px; }
+.nav .btn-primary { flex: 1; }
+
+.btn-secondary {
+    padding: 16px 28px;
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 17px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.error {
+    background: #fdeaea;
+    border: 1px solid #e5a5a5;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 15px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   СТРАНИЦА ВЫБОРА
+   Цель — уместить всё задание в один экран без прокрутки.
+   Все вертикальные размеры умножены на --fit: скрипт уменьшает
+   коэффициент, если у респондента низкое окно.
+   ══════════════════════════════════════════════════════════════════ */
+
+body:has(.compare) .page {
+    max-width: 1060px;
+    padding: calc(14px * var(--fit)) 20px calc(16px * var(--fit));
+}
+
+body:has(.compare) .header {
+    font-size: calc(13px * var(--fit));
+    line-height: 1.3;
+    padding-bottom: calc(8px * var(--fit));
+    margin-bottom: calc(12px * var(--fit));
+}
+
+body:has(.compare) .footer { margin: 0; }
+
+.progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: calc(12px * var(--fit));
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width .3s;
+}
+
+.progress-text {
+    font-size: calc(13px * var(--fit));
+    line-height: 1.4;
+    color: var(--muted);
+    margin-bottom: calc(5px * var(--fit));
+}
+
+.task-title {
+    font-size: calc(18px * var(--fit));
+    line-height: 1.35;
+    margin: 0 0 calc(9px * var(--fit));
+}
+
+.task-intro {
+    font-size: calc(13px * var(--fit));
+    line-height: 1.45;
+    color: #555;
+    margin-bottom: calc(12px * var(--fit));
+}
+
+.task-intro p { margin: calc(4px * var(--fit)) 0; }
+
+/* Сетка сравнения: три колонки на компьютере */
+.compare {
+    display: grid;
+    grid-template-columns: 200px 1fr 1fr;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: calc(13px * var(--fit));
+}
+
+.cmp-head {
+    padding: calc(8px * var(--fit)) 12px;
+    font-weight: 600;
+    font-size: calc(13px * var(--fit));
+    line-height: 1.35;
+    background: #f0f3f7;
+    border-bottom: 1px solid var(--border);
+}
+
+.cmp-attr, .cmp-cell {
+    padding: calc(8px * var(--fit)) 12px;
+    font-size: calc(13.5px * var(--fit));
+    line-height: 1.4;
+    border-bottom: 1px solid #ececec;
+}
+
+.cmp-attr { color: var(--muted); }
+.cmp-cell { border-left: 1px solid #ececec; }
+
+/* последняя строка без нижней границы — экономит пиксель и выглядит чище */
+.compare > *:nth-last-child(-n+3) { border-bottom: none; }
+
+/* Название характеристики внутри карточки — только для мобильного */
+.cmp-mobile-attr { display: none; }
+
+/* Блок выбора: заголовок слева, три варианта в один ряд */
+.choice-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: calc(10px * var(--fit)) 14px;
+}
+
+.choice-title {
+    font-weight: 600;
+    font-size: calc(14px * var(--fit));
+    line-height: 1.3;
+    flex-shrink: 0;
+}
+
+.choice-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    flex: 1;
+}
+
+.choice-block .option {
+    align-items: center;
+    gap: 8px;
+    padding: calc(8px * var(--fit)) 12px;
+    font-size: calc(14px * var(--fit));
+    line-height: 1.3;
+    margin: 0;
+}
+
+.choice-block .option input { margin: 0; }
+
+body:has(.compare) .nav { margin-top: calc(12px * var(--fit)); }
+
+body:has(.compare) .btn-primary {
+    padding: calc(11px * var(--fit)) 24px;
+    font-size: calc(15px * var(--fit));
+}
+
+body:has(.compare) .error {
+    padding: calc(8px * var(--fit)) 14px;
+    margin-bottom: calc(10px * var(--fit));
+    font-size: calc(13px * var(--fit));
+}
+
+/* ── Мобильная версия: две карточки одна под другой ── */
+@media (max-width: 780px) {
+    body:has(.compare) .page { padding: 16px 14px 40px; }
+
+    .compare {
+        display: block;
+        border: none;
+        background: none;
+        margin-bottom: 18px;
+    }
+
+    /* шапка и колонка названий не нужны: названия уйдут в карточки */
+    .cmp-head, .cmp-attr { display: none; }
+
+    .cmp-cell {
+        border: none;
+        padding: 12px 16px;
+        font-size: 15px;
+        line-height: 1.5;
+        background: #fff;
+    }
+
+    /* карточки собираются из ячеек одной колонки */
+    .cmp-col-1 { border-left: 3px solid var(--accent); }
+    .cmp-col-2 { border-left: 3px solid #8a8a8a; }
+
+    /* заголовок продукта перед первой ячейкой каждой колонки */
+    .cmp-col-1:nth-of-type(4)::before { content: "ИИ-продукт 1"; }
+    .cmp-col-2:nth-of-type(5)::before { content: "ИИ-продукт 2"; }
+
+    .cmp-mobile-attr {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 3px;
+    }
+
+    .cmp-value { display: block; }
+
+    /* на телефоне варианты выбора снова в столбик */
+    .choice-block { display: block; padding: 16px; }
+    .choice-title { margin-bottom: 12px; }
+    .choice-row { display: flex; flex-direction: column; gap: 10px; }
+    .choice-block .option { padding: 14px 16px; font-size: 16px; }
+
+    .task-title { font-size: 19px; margin-bottom: 14px; }
+    .task-intro { font-size: 14px; margin-bottom: 18px; }
+}
