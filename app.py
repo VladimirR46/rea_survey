@@ -226,6 +226,67 @@ def prev_visible(idx, answers):
     return None
 
 
+def prune_hidden_answers(rid):
+    """Удаляет ответы на вопросы, ставшие ненужными.
+
+    Человек мог вернуться назад и сменить ветвящий ответ: был
+    «практикующий врач» — стал «руководитель», и вопрос про формат помощи
+    больше не задаётся. Без очистки в данных остаётся формат помощи
+    у руководителя, которого о нём не спрашивали.
+
+    Цикл — на случай цепочки условий. Удаление может только открывать
+    вопросы, но не скрывать, поэтому он всегда сходится."""
+    db = get_db()
+    while True:
+        answers = get_answers(rid)
+        hidden = [q["code"] for q in QUESTIONS
+                  if q["code"] in answers and is_skipped(q, answers)]
+        if not hidden:
+            return answers
+        db.executemany(
+            "DELETE FROM survey_answer WHERE respondent_id = ? AND question_code = ?",
+            [(rid, code) for code in hidden],
+        )
+        db.commit()
+
+
+def finish_tasks(rid):
+    """Завершение опроса: этап done и отметка времени."""
+    db = get_db()
+    total = db.execute(
+        "SELECT COUNT(*) c FROM task WHERE respondent_id = ?", (rid,)
+    ).fetchone()["c"]
+    db.execute("UPDATE respondent SET finished_at = ? WHERE id = ? "
+               "AND finished_at IS NULL", (now(), rid))
+    db.commit()
+    _set_step(rid, total, stage="done")
+    return redirect(url_for("thanks"))
+
+
+def redirect_to_stage(r):
+    """Единственное место, которое решает, где респонденту сейчас место.
+
+    Этап определяет доступный раздел: survey — только вопросы, tasks —
+    только задания, done и withdrawn — только финальная страница. Любой
+    маршрут не своего этапа возвращает человека сюда, а не обрабатывает
+    запрос: иначе шаг одного раздела трактуется как шаг другого."""
+    stage = r["stage"]
+    if stage == "survey":
+        return redirect(url_for("survey", idx=r["step"]))
+    if stage == "tasks":
+        return redirect(url_for("task", idx=r["step"]))
+    return redirect(url_for("thanks"))
+
+
+def finish_survey(rid):
+    """Переход от анкеты к заданиям. Один и тот же переход нужен и после
+    последнего ответа, и когда шаг почему-то оказался за пределами анкеты."""
+    materialize_tasks(rid)
+    # step обнуляется: теперь это номер задания, а не вопроса
+    _set_step(rid, 0, stage="tasks")
+    return redirect(url_for("task", idx=0))
+
+
 def progress(idx, answers):
     """Позиция и общее число вопросов с учётом пропусков. Число может
     измениться после ответа на первый вопрос — это нормально.
@@ -255,12 +316,21 @@ LEVELS = {
 
 @app.get("/")
 def index():
+    """Начатое прохождение продолжается с того места, где человек его бросил."""
+    r = current_respondent()
+    if r is not None:
+        return redirect_to_stage(r)
     return render_template("welcome.html")
 
 
 @app.post("/start")
 def start():
     """Согласие получено: создаём респондента и фиксируем факт согласия."""
+    # повторная отправка формы не должна создавать второго респондента
+    r = current_respondent()
+    if r is not None:
+        return redirect_to_stage(r)
+
     rid = str(uuid.uuid4())
     db = get_db()
 
@@ -285,16 +355,21 @@ def survey(idx):
     if r is None:
         return redirect(url_for("index"))
 
+    if r["stage"] != "survey":
+        return redirect_to_stage(r)
+
     # Промотать вперёд по URL нельзя: сверяем с сохранённым шагом
-    if idx != r["step"] or idx >= len(QUESTIONS):
+    if idx != r["step"]:
         return redirect(url_for("survey", idx=r["step"]))
 
     answers = get_answers(r["id"])
 
-    # Вопрос мог стать пропускаемым — перескакиваем на следующий видимый
+    # Вопрос мог стать пропускаемым — перескакиваем на следующий видимый.
+    # None значит, что вопросы кончились. Сравнивать idx с len(QUESTIONS)
+    # здесь нельзя: редирект на тот же самый idx уходил в цикл.
     target = next_visible(idx, answers)
     if target is None:
-        return redirect(url_for("tasks_entry"))
+        return finish_survey(r["id"])
     if target != idx:
         _set_step(r["id"], target)
         return redirect(url_for("survey", idx=target))
@@ -316,6 +391,9 @@ def survey_submit(idx):
     r = current_respondent()
     if r is None:
         return redirect(url_for("index"))
+
+    if r["stage"] != "survey":
+        return redirect_to_stage(r)
 
     # Форма из устаревшей вкладки или прямой запрос мимо текущего шага.
     # Ответ не принимаем и возвращаем человека туда, где он на самом деле.
@@ -354,13 +432,12 @@ def survey_submit(idx):
     )
     db.commit()
 
-    # Ответ мог включить пропуск — пересчитываем на свежих данных
-    target = next_visible(idx + 1, get_answers(r["id"]))
+    # Ответ мог включить пропуск — убираем осиротевшие ответы
+    # и пересчитываем на свежих данных
+    answers = prune_hidden_answers(r["id"])
+    target = next_visible(idx + 1, answers)
     if target is None:
-        materialize_tasks(r["id"])
-        # step обнуляется: теперь это номер задания, а не вопроса
-        _set_step(r["id"], 0, stage="tasks")
-        return redirect(url_for("tasks_entry"))
+        return finish_survey(r["id"])
 
     _set_step(r["id"], target)
     return redirect(url_for("survey", idx=target))
@@ -368,10 +445,11 @@ def survey_submit(idx):
 
 @app.get("/tasks")
 def tasks_entry():
+    """Вход в блок заданий — перенаправляет на текущее."""
     r = current_respondent()
     if r is None:
         return redirect(url_for("index"))
-    return redirect(url_for("task", idx=r["step"]))
+    return redirect_to_stage(r)
 
 
 @app.get("/task/<int:idx>")
@@ -380,8 +458,8 @@ def task(idx):
     if r is None:
         return redirect(url_for("index"))
 
-    if r["stage"] == "done":
-        return redirect(url_for("thanks"))
+    if r["stage"] != "tasks":
+        return redirect_to_stage(r)
 
     if idx != r["step"]:
         return redirect(url_for("task", idx=r["step"]))
@@ -391,8 +469,10 @@ def task(idx):
         "SELECT * FROM task WHERE respondent_id = ? AND idx = ?", (r["id"], idx)
     ).fetchone()
 
+    # Заданий больше нет: доводим состояние до конца, а не показываем
+    # благодарность человеку, который так и остался на этапе tasks
     if row is None:
-        return redirect(url_for("thanks"))
+        return finish_tasks(r["id"])
 
     # Время только первого показа: иначе обновление страницы обнулило бы отсчёт
     if row["shown_at"] is None:
@@ -424,12 +504,18 @@ def task_submit(idx):
     if idx != r["step"]:
         return redirect(url_for("task", idx=r["step"]))
 
+    if r["stage"] != "tasks":
+        return redirect_to_stage(r)
+
+    if idx != r["step"]:
+        return redirect(url_for("task", idx=r["step"]))
+
     db = get_db()
     row = db.execute(
         "SELECT * FROM task WHERE respondent_id = ? AND idx = ?", (r["id"], idx)
     ).fetchone()
     if row is None:
-        return redirect(url_for("thanks"))
+        return finish_tasks(r["id"])
 
     total = db.execute(
         "SELECT COUNT(*) c FROM task WHERE respondent_id = ?", (r["id"],)
@@ -471,11 +557,7 @@ def task_submit(idx):
     db.commit()
 
     if idx + 1 >= total:
-        _set_step(r["id"], total, stage="done")
-        db.execute("UPDATE respondent SET finished_at = ? WHERE id = ?",
-                   (now(), r["id"]))
-        db.commit()
-        return redirect(url_for("thanks"))
+        return finish_tasks(r["id"])
 
     _set_step(r["id"], idx + 1)
     return redirect(url_for("task", idx=idx + 1))
@@ -483,8 +565,15 @@ def task_submit(idx):
 
 @app.get("/thanks")
 def thanks():
+    """Финальная страница. Сессия очищается только здесь и только у того,
+    кто действительно закончил: иначе случайный заход на этот адрес
+    посреди опроса стирал куку и обнулял всё прохождение."""
     r = current_respondent()
     if r is None:
         return redirect(url_for("index"))
+    if r["stage"] not in ("done", "withdrawn"):
+        return redirect_to_stage(r)
+
+    withdrawn = r["stage"] == "withdrawn"
     session.clear()
-    return render_template("thanks.html")
+    return render_template("thanks.html", withdrawn=withdrawn)
