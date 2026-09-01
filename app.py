@@ -48,6 +48,12 @@ with open(os.path.join(BASE_DIR, "design/questions.json"), encoding="utf-8") as 
 with open(os.path.join(BASE_DIR, "design/attributes.json"), encoding="utf-8") as f:
     ATTRIBUTES = json.load(f)["attributes"]
 
+# Свободный ввод («другая специальность») хранится отдельной строкой
+# survey_answer с кодом «<вопрос>_other». Так основной ответ остаётся
+# категориальным и пригодным для подсчётов, а текст лежит рядом.
+OTHER_SUFFIX = "_other"
+OTHER_MAX_LEN = 100
+
 # 'shared' — один набор заданий на всех, 'individual' — свой каждому
 DESIGN_MODE = os.environ.get("DESIGN_MODE", "individual")
 N_TASKS = int(os.environ.get("N_TASKS", "12"))
@@ -226,6 +232,21 @@ def prev_visible(idx, answers):
     return None
 
 
+def other_option(question):
+    """Вариант этого вопроса, требующий текстового ответа, или None."""
+    for opt in question["options"]:
+        if opt.get("other"):
+            return opt
+    return None
+
+
+def clean_other_text(raw):
+    """Приводит свободный ввод к виду, пригодному для анализа:
+    схлопывает пробелы и обрезает по длине."""
+    text = " ".join((raw or "").split())
+    return text[:OTHER_MAX_LEN]
+
+
 def prune_hidden_answers(rid):
     """Удаляет ответы на вопросы, ставшие ненужными.
 
@@ -234,18 +255,34 @@ def prune_hidden_answers(rid):
     больше не задаётся. Без очистки в данных остаётся формат помощи
     у руководителя, которого о нём не спрашивали.
 
+    Заодно убирает текст свободного ввода, если вопрос скрылся или
+    человек передумал и выбрал обычный вариант.
+
     Цикл — на случай цепочки условий. Удаление может только открывать
     вопросы, но не скрывать, поэтому он всегда сходится."""
     db = get_db()
     while True:
         answers = get_answers(rid)
-        hidden = [q["code"] for q in QUESTIONS
-                  if q["code"] in answers and is_skipped(q, answers)]
-        if not hidden:
+        drop = set()
+
+        for q in QUESTIONS:
+            code = q["code"]
+            if code in answers and is_skipped(q, answers):
+                drop.add(code)
+
+            # текст имеет смысл, только пока выбран сам вариант «другое»
+            other_code = code + OTHER_SUFFIX
+            if other_code in answers:
+                opt = other_option(q)
+                if code in drop or opt is None or answers.get(code) != opt["value"]:
+                    drop.add(other_code)
+
+        if not drop:
             return answers
+
         db.executemany(
             "DELETE FROM survey_answer WHERE respondent_id = ? AND question_code = ?",
-            [(rid, code) for code in hidden],
+            [(rid, code) for code in sorted(drop)],
         )
         db.commit()
 
@@ -310,6 +347,13 @@ LEVELS = {
     for attr in DESIGN_SPEC["attributes"]
     for lvl in attr["levels"]
 }
+
+
+@app.context_processor
+def template_globals():
+    """Ограничение длины свободного ввода задаётся в одном месте
+    и попадает в атрибут maxlength."""
+    return {"other_max": OTHER_MAX_LEN}
 
 
 # ─────────────────────────────  маршруты  ─────────────────────────────
@@ -382,6 +426,7 @@ def survey(idx):
         pos=pos,
         total=total,
         selected=answers.get(QUESTIONS[idx]["code"]),
+        other_value=answers.get(QUESTIONS[idx]["code"] + OTHER_SUFFIX),
         has_prev=prev_visible(idx, answers) is not None,
     )
 
@@ -412,17 +457,29 @@ def survey_submit(idx):
         return redirect(url_for("survey", idx=idx))
 
     value = request.form.get("value")
-    # Проверка на сервере обязательна: атрибут required обходится
-    # отключением JS или прямым POST-запросом
-    valid = {o["value"] for o in question["options"]}
-    if value not in valid:
+    other_text = clean_other_text(request.form.get("other_text"))
+
+    def invalid(message, keep_selected=None):
+        """Показать вопрос заново с сообщением, не потеряв введённое."""
         answers = get_answers(r["id"])
         pos, total = progress(idx, answers)
         return render_template(
             "question.html", question=question, idx=idx, pos=pos, total=total,
-            selected=None, has_prev=prev_visible(idx, answers) is not None,
-            error="Выберите один из вариантов",
+            selected=keep_selected, other_value=other_text,
+            has_prev=prev_visible(idx, answers) is not None,
+            error=message,
         ), 400
+
+    # Проверка на сервере обязательна: атрибут required обходится
+    # отключением JS или прямым POST-запросом
+    valid = {o["value"] for o in question["options"]}
+    if value not in valid:
+        return invalid("Выберите один из вариантов")
+
+    chosen = next(o for o in question["options"] if o["value"] == value)
+    wants_text = bool(chosen.get("other"))
+    if wants_text and not other_text:
+        return invalid("Укажите вашу специальность", keep_selected=value)
 
     db.execute(
         """INSERT OR REPLACE INTO survey_answer
@@ -430,6 +487,20 @@ def survey_submit(idx):
            VALUES (?, ?, ?, ?)""",
         (r["id"], question["code"], value, now()),
     )
+    other_code = question["code"] + OTHER_SUFFIX
+    if wants_text:
+        db.execute(
+            """INSERT OR REPLACE INTO survey_answer
+                   (respondent_id, question_code, value, answered_at)
+               VALUES (?, ?, ?, ?)""",
+            (r["id"], other_code, other_text, now()),
+        )
+    else:
+        # человек мог сначала выбрать «другое», а потом передумать
+        db.execute(
+            "DELETE FROM survey_answer WHERE respondent_id = ? AND question_code = ?",
+            (r["id"], other_code),
+        )
     db.commit()
 
     # Ответ мог включить пропуск — убираем осиротевшие ответы

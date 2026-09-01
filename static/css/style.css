@@ -331,3 +331,32 @@ body:has(.compare) .error {
 
     body:has(.compare) .btn-primary { padding: 14px 24px; font-size: 16px; }
 }
+
+/* Пояснение под текстом вопроса */
+.question-hint {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: -16px 0 24px;
+}
+
+/* Вариант со свободным вводом: поле появляется, только когда вариант выбран */
+.option-other .other-input { display: none; }
+
+.option-other:has(input[type="radio"]:checked) .other-input {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 13px 16px;
+    font-family: inherit;
+    font-size: 16px;          /* меньше 16px — iOS зумит страницу при фокусе */
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+}
+
+.option-other .other-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}

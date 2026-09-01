@@ -6,20 +6,41 @@
 
     <h1 class="question-text">{{ question.text }}</h1>
 
+    {% if question.hint %}<p class="question-hint">{{ question.hint }}</p>{% endif %}
+
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
     <form method="post" action="{{ url_for('survey_submit', idx=idx) }}">
         <div class="options">
             {% for opt in question.options %}
-                <!-- вся плашка — это label, поэтому кликается целиком -->
-                <label class="option">
-                    <input type="radio" name="value" value="{{ opt.value }}"
-                           {% if selected == opt.value %}checked{% endif %} required>
-                    <span class="option-body">
-                        <span class="option-label">{{ opt.label }}</span>
-                        {% if opt.hint %}<span class="option-hint">{{ opt.hint }}</span>{% endif %}
-                    </span>
-                </label>
+                {% if opt.other %}
+                    <!-- поле ввода лежит рядом с label, а не внутри: клик по нему
+                         не должен переключать переключатель -->
+                    <div class="option-other">
+                        <label class="option">
+                            <input type="radio" name="value" value="{{ opt.value }}"
+                                   {% if selected == opt.value %}checked{% endif %} required>
+                            <span class="option-body">
+                                <span class="option-label">{{ opt.label }}</span>
+                            </span>
+                        </label>
+                        <input type="text" name="other_text" class="other-input"
+                               maxlength="{{ other_max }}"
+                               value="{{ other_value or '' }}"
+                               placeholder="{{ opt.other_placeholder or 'Укажите' }}"
+                               aria-label="{{ opt.other_placeholder or 'Укажите' }}">
+                    </div>
+                {% else %}
+                    <!-- вся плашка — это label, поэтому кликается целиком -->
+                    <label class="option">
+                        <input type="radio" name="value" value="{{ opt.value }}"
+                               {% if selected == opt.value %}checked{% endif %} required>
+                        <span class="option-body">
+                            <span class="option-label">{{ opt.label }}</span>
+                            {% if opt.hint %}<span class="option-hint">{{ opt.hint }}</span>{% endif %}
+                        </span>
+                    </label>
+                {% endif %}
             {% endfor %}
         </div>
 
