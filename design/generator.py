@@ -37,6 +37,7 @@ def generate(attributes, seed, n_tasks):
     Чистая функция: одни и те же аргументы дают один и тот же результат."""
     rng = random.Random(seed)
     tasks = []
+    seen = set()   # уже выданные пары, без учёта порядка A/B
     attempts = 0
 
     while len(tasks) < n_tasks and attempts < n_tasks * 200:
@@ -49,6 +50,13 @@ def generate(attributes, seed, n_tasks):
             continue
         if _dominates(a, b, attributes) or _dominates(b, a, attributes):
             continue
+
+        # Профилей мало (при 4 характеристиках — 24), поэтому без этой
+        # проверки одна и та же пара заметно часто попадается дважды
+        key = frozenset((tuple(sorted(a.items())), tuple(sorted(b.items()))))
+        if key in seen:
+            continue
+        seen.add(key)
 
         tasks.append({"A": a, "B": b})
 

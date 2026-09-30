@@ -1,7 +1,7 @@
 """Опрос предпочтений врачей в отношении медицинских ИИ-систем.
 РЭУ им. Г.В. Плеханова.
 
-Поток: согласие -> анкета -> задания выбора -> благодарность.
+Поток: согласие -> анкета -> инструкция -> задания выбора -> благодарность.
 Состояние респондента хранится в БД (stage и step), в куке только UUID.
 """
 
@@ -56,7 +56,7 @@ OTHER_MAX_LEN = 100
 
 # 'shared' — один набор заданий на всех, 'individual' — свой каждому
 DESIGN_MODE = os.environ.get("DESIGN_MODE", "individual")
-N_TASKS = int(os.environ.get("N_TASKS", "12"))
+N_TASKS = int(os.environ.get("N_TASKS", "10"))
 DESIGN_SEED = int(os.environ.get("DESIGN_SEED", "20260901"))
 
 
@@ -310,18 +310,31 @@ def redirect_to_stage(r):
     stage = r["stage"]
     if stage == "survey":
         return redirect(url_for("survey", idx=r["step"]))
+    if stage == "intro":
+        return redirect(url_for("tasks_intro"))
     if stage == "tasks":
         return redirect(url_for("task", idx=r["step"]))
     return redirect(url_for("thanks"))
 
 
 def finish_survey(rid):
-    """Переход от анкеты к заданиям. Один и тот же переход нужен и после
-    последнего ответа, и когда шаг почему-то оказался за пределами анкеты."""
+    """Переход от анкеты к инструкции перед заданиями. Один и тот же переход
+    нужен и после последнего ответа, и когда шаг почему-то оказался
+    за пределами анкеты."""
     materialize_tasks(rid)
-    # step обнуляется: теперь это номер задания, а не вопроса
-    _set_step(rid, 0, stage="tasks")
-    return redirect(url_for("task", idx=0))
+    _set_step(rid, 0, stage="intro")
+    return redirect(url_for("tasks_intro"))
+
+
+def plural_ru(n, one, few, many):
+    """Согласование существительного с числом: 1 ситуация, 3 ситуации,
+    10 ситуаций."""
+    n = abs(int(n))
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
 
 
 def progress(idx, answers):
@@ -353,7 +366,7 @@ LEVELS = {
 def template_globals():
     """Ограничение длины свободного ввода задаётся в одном месте
     и попадает в атрибут maxlength."""
-    return {"other_max": OTHER_MAX_LEN}
+    return {"other_max": OTHER_MAX_LEN, "plural_ru": plural_ru}
 
 
 # ─────────────────────────────  маршруты  ─────────────────────────────
@@ -514,6 +527,35 @@ def survey_submit(idx):
     return redirect(url_for("survey", idx=target))
 
 
+@app.route("/tasks/intro", methods=["GET", "POST"])
+def tasks_intro():
+    """Инструкция перед заданиями выбора. Вынесена на отдельную страницу,
+    чтобы не повторять её над каждой таблицей сравнения."""
+    r = current_respondent()
+    if r is None:
+        return redirect(url_for("index"))
+    if r["stage"] != "intro":
+        return redirect_to_stage(r)
+
+    if request.method == "POST":
+        # Назад — к последнему показанному вопросу анкеты
+        if request.form.get("action") == "back":
+            target = prev_visible(len(QUESTIONS), get_answers(r["id"]))
+            if target is not None:
+                _set_step(r["id"], target, stage="survey")
+                return redirect(url_for("survey", idx=target))
+            return redirect(url_for("tasks_intro"))
+
+        # step обнуляется: теперь это номер задания, а не вопроса
+        _set_step(r["id"], 0, stage="tasks")
+        return redirect(url_for("task", idx=0))
+
+    total = get_db().execute(
+        "SELECT COUNT(*) c FROM task WHERE respondent_id = ?", (r["id"],)
+    ).fetchone()["c"]
+    return render_template("task_intro.html", total=total)
+
+
 @app.get("/tasks")
 def tasks_entry():
     """Вход в блок заданий — перенаправляет на текущее."""
@@ -571,9 +613,6 @@ def task_submit(idx):
     r = current_respondent()
     if r is None:
         return redirect(url_for("index"))
-
-    if idx != r["step"]:
-        return redirect(url_for("task", idx=r["step"]))
 
     if r["stage"] != "tasks":
         return redirect_to_stage(r)

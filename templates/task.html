@@ -14,17 +14,6 @@
         внедрить в медицинской организации?
     </h1>
 
-    <div class="task-intro">
-        <p>Представьте, что обе системы прошли необходимые проверки,
-        соответствуют установленным требованиям и доступны для применения
-        в вашей медицинской организации. Пожалуйста, сравните характеристики
-        систем и выберите один вариант.</p>
-
-        <p>Предположите, что затраты медицинской организации на приобретение,
-        внедрение и использование обеих систем одинаковы. Все остальные
-        характеристики, не указанные в таблице, также не различаются.</p>
-    </div>
-
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
     <form method="post" action="{{ url_for('task_submit', idx=idx) }}" id="task-form">
@@ -32,8 +21,8 @@
         <input type="hidden" name="dwell_ms" id="dwell_ms" value="0">
 
         <div class="compare">
-            <!-- Шапка: на мобильном скрывается, названия уходят внутрь карточек -->
-            <div class="cmp-head cmp-col-attr">Характеристики</div>
+            <!-- Две колонки на любом экране: название характеристики
+                 строкой во всю ширину, под ней значения двух систем -->
             <div class="cmp-head cmp-col-1">ИИ-продукт 1</div>
             <div class="cmp-head cmp-col-2">ИИ-продукт 2</div>
 
@@ -43,7 +32,7 @@
                 <div class="cmp-cell cmp-col-1">
                     <span class="cmp-value">
                         {% if row.left.detail %}
-                            <b>{{ row.left.label }}:</b> {{ row.left.detail }}
+                            {{ row.left.label }}: {{ row.left.detail }}
                         {% else %}
                             {{ row.left.label }}
                         {% endif %}
@@ -53,7 +42,7 @@
                 <div class="cmp-cell cmp-col-2">
                     <span class="cmp-value">
                         {% if row.right.detail %}
-                            <b>{{ row.right.label }}:</b> {{ row.right.detail }}
+                            {{ row.right.label }}: {{ row.right.detail }}
                         {% else %}
                             {{ row.right.label }}
                         {% endif %}

@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS respondent (
     id               TEXT PRIMARY KEY,       -- UUID, он же в куке
     design_id        INTEGER REFERENCES design(id),
     seed             INTEGER,                -- личный seed для individual
-    stage            TEXT NOT NULL,          -- welcome|survey|tasks|done|withdrawn
+    stage            TEXT NOT NULL,          -- welcome|survey|intro|tasks|done|withdrawn
     step             INTEGER NOT NULL DEFAULT 0,
     created_at       TEXT NOT NULL,
     consent_at       TEXT,

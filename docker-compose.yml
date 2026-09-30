@@ -10,6 +10,8 @@ services:
       - ./:/app
       # база в папке проекта, переживает пересоздание контейнера
       - ./data:/data
+    # Правки здесь --reload НЕ подхватывает: после изменения выполните
+    # `docker compose up -d`, чтобы контейнер пересоздался с новыми значениями
     environment:
       SCRIPT_NAME: /survey
       # Ключ подписи кук сессий. Новый: python3 -c "import secrets; print(secrets.token_hex(32))"
@@ -18,7 +20,7 @@ services:
       SESSION_DAYS: 14
       # Параметры опроса
       DESIGN_MODE: individual
-      N_TASKS: 12
+      N_TASKS: 10
       DESIGN_SEED: 20260901
     # --threads обязателен. Без него gunicorn обрабатывает по одному
     # соединению за раз: браузер открывает соединения заранее, ничего в них
