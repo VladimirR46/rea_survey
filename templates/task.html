@@ -32,7 +32,8 @@
                 <div class="cmp-cell cmp-col-1">
                     <span class="cmp-value">
                         {% if row.left.detail %}
-                            {{ row.left.label }}: {{ row.left.detail }}
+                            <span class="cmp-lead">{{ row.left.label }}:</span>
+                            {% for line in row.left.detail %}<span class="cmp-line">– {{ line }}</span>{% endfor %}
                         {% else %}
                             {{ row.left.label }}
                         {% endif %}
@@ -42,7 +43,8 @@
                 <div class="cmp-cell cmp-col-2">
                     <span class="cmp-value">
                         {% if row.right.detail %}
-                            {{ row.right.label }}: {{ row.right.detail }}
+                            <span class="cmp-lead">{{ row.right.label }}:</span>
+                            {% for line in row.right.detail %}<span class="cmp-line">– {{ line }}</span>{% endfor %}
                         {% else %}
                             {{ row.right.label }}
                         {% endif %}

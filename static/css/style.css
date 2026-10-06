@@ -332,3 +332,7 @@ body:has(.compare) .error {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }
+
+.cmp-lead,
+.cmp-line { display: block; }
+.cmp-line { padding-left: 0.9em; text-indent: -0.9em; }
