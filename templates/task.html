@@ -10,7 +10,7 @@
     </div>
 
     <h1 class="task-title">
-        Какую из представленных ИИ-систем, на ваш взгляд, предпочтительнее
+        Какое из представленных ИИ-решений, на ваш взгляд, предпочтительнее
         внедрить в медицинской организации?
     </h1>
 
@@ -22,9 +22,9 @@
 
         <div class="compare">
             <!-- Две колонки на любом экране: название характеристики
-                 строкой во всю ширину, под ней значения двух систем -->
-            <div class="cmp-head cmp-col-1">ИИ-продукт 1</div>
-            <div class="cmp-head cmp-col-2">ИИ-продукт 2</div>
+                 строкой во всю ширину, под ней значения двух решений -->
+            <div class="cmp-head cmp-col-1">ИИ-решение 1</div>
+            <div class="cmp-head cmp-col-2">ИИ-решение 2</div>
 
             {% for row in rows %}
                 <div class="cmp-attr">{{ row.name }}</div>
@@ -61,17 +61,17 @@
             <div class="choice-row">
                 <label class="option">
                     <input type="radio" name="choice" value="left" required>
-                    <span class="option-body">ИИ-продукт 1</span>
+                    <span class="option-body">ИИ-решение 1</span>
                 </label>
 
                 <label class="option">
                     <input type="radio" name="choice" value="right" required>
-                    <span class="option-body">ИИ-продукт 2</span>
+                    <span class="option-body">ИИ-решение 2</span>
                 </label>
 
                 <label class="option">
                     <input type="radio" name="choice" value="none" required>
-                    <span class="option-body">Ни одну из систем</span>
+                    <span class="option-body">Ни одно из решений</span>
                 </label>
             </div>
         </div>
