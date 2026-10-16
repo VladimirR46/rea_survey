@@ -336,3 +336,16 @@ body:has(.compare) .error {
 .cmp-lead,
 .cmp-line { display: block; }
 .cmp-line { padding-left: 0.9em; text-indent: -0.9em; }
+
+/* Поле ключа на странице выгрузки */
+.key-input {
+    display: block;
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 13px 16px;
+    font-family: inherit;
+    font-size: 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}

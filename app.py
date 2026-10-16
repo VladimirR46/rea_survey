@@ -5,15 +5,20 @@
 Состояние респондента хранится в БД (stage и step), в куке только UUID.
 """
 
+import csv
 import hashlib
+import hmac
+import io
 import json
 import os
 import random
 import sqlite3
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import (Flask, Response, abort, redirect, render_template, request,
+                   session, url_for)
 
 from db import DB_PATH, get_db, init_db
 from design.generator import generate
@@ -58,12 +63,18 @@ OTHER_MAX_LEN = 100
 DESIGN_MODE = os.environ.get("DESIGN_MODE", "individual")
 N_TASKS = int(os.environ.get("N_TASKS", "10"))
 DESIGN_SEED = int(os.environ.get("DESIGN_SEED", "20260901"))
+# Сколько уже показанных ситуаций повторить в конце с переставленными
+# колонками — проверка устойчивости ответов. Добавляются сверх N_TASKS.
+N_REPEATS = int(os.environ.get("N_REPEATS", "2"))
+
+# Ключ для страницы выгрузки /results. Пустой — страница выключена.
+RESULTS_KEY = os.environ.get("RESULTS_KEY", "")
 
 
 # ─────────────────────────────  утилиты  ─────────────────────────────
 
 def now():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
 def is_mobile(user_agent):
@@ -163,16 +174,28 @@ def materialize_tasks(rid):
     # усталости ляжет на одни и те же пары у всех респондентов
     rng.shuffle(pairs)
 
-    for i, pair in enumerate(pairs):
+    def insert(i, pair, swapped, repeat_of=None):
         db.execute(
             """INSERT INTO task
-                   (respondent_id, idx, profile_a_json, profile_b_json, swapped)
-               VALUES (?, ?, ?, ?, ?)""",
+                   (respondent_id, idx, profile_a_json, profile_b_json,
+                    swapped, repeat_of)
+               VALUES (?, ?, ?, ?, ?, ?)""",
             (rid, i,
              json.dumps(pair["A"], ensure_ascii=False),
              json.dumps(pair["B"], ensure_ascii=False),
-             rng.randint(0, 1)),   # какой профиль окажется слева
+             swapped, repeat_of),
         )
+
+    swaps = [rng.randint(0, 1) for _ in pairs]   # какой профиль окажется слева
+    for i, pair in enumerate(pairs):
+        insert(i, pair, swaps[i])
+
+    # Повторы: те же пары, но колонки переставлены местами. Последнюю
+    # ситуацию не берём, чтобы повтор не шёл сразу за оригиналом.
+    n = len(pairs)
+    pool = list(range(n - 1))
+    for j, orig in enumerate(rng.sample(pool, min(N_REPEATS, len(pool)))):
+        insert(n + j, pairs[orig], 1 - swaps[orig], repeat_of=orig)
 
     db.execute("UPDATE respondent SET design_id = ?, seed = ? WHERE id = ?",
                (DESIGN_ID, seed, rid))
@@ -346,6 +369,93 @@ def progress(idx, answers):
     visible = [i for i, q in enumerate(QUESTIONS) if not is_skipped(q, answers)]
     pos = sum(1 for i in visible if i <= idx) or 1
     return pos, len(visible)
+
+
+def export_csv():
+    """Все данные одной таблицей: строка на ситуацию выбора.
+
+    Ответы анкеты повторяются в каждой строке респондента. Кто не дошёл
+    до заданий, попадает одной строкой с пустыми полями заданий.
+    Значения — коды из json (support, t30, ...), а не подписи."""
+    db = get_db()
+
+    q_cols = []
+    for q in QUESTIONS:
+        q_cols.append(q["code"])
+        if other_option(q):
+            q_cols.append(q["code"] + OTHER_SUFFIX)
+
+    answers = {}
+    for a in db.execute("SELECT respondent_id, question_code, value FROM survey_answer"):
+        answers.setdefault(a["respondent_id"], {})[a["question_code"]] = a["value"]
+
+    rows = db.execute(
+        """SELECT r.id, r.stage, r.created_at, r.consent_at, r.consent_version,
+                  r.finished_at, r.is_mobile, r.design_id,
+                  t.idx, t.profile_a_json, t.profile_b_json, t.swapped,
+                  t.repeat_of, t.choice, t.shown_at, t.answered_at, t.dwell_ms
+           FROM respondent r LEFT JOIN task t ON t.respondent_id = r.id
+           ORDER BY r.created_at, r.id, t.idx"""
+    ).fetchall()
+
+    # характеристики: текущие плюс те, что встретились в старых дизайнах
+    attr_codes = [a["code"] for a in DESIGN_SPEC["attributes"]]
+    parsed = []
+    for r in rows:
+        pa = json.loads(r["profile_a_json"]) if r["profile_a_json"] else {}
+        pb = json.loads(r["profile_b_json"]) if r["profile_b_json"] else {}
+        attr_codes += [c for c in list(pa) + list(pb) if c not in attr_codes]
+        parsed.append((r, pa, pb))
+
+    choice_of = {(r["id"], r["idx"]): r["choice"] for r in rows if r["idx"] is not None}
+
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(
+        ["respondent_id", "stage", "created_at", "consent_at", "consent_version",
+         "finished_at", "is_mobile", "design_id"]
+        + q_cols
+        + ["task", "repeat_of_task", "repeat_consistent"]
+        + ["A_" + c for c in attr_codes] + ["B_" + c for c in attr_codes]
+        + ["left", "choice", "choice_position", "shown_at", "answered_at", "dwell_ms"]
+    )
+
+    for r, pa, pb in parsed:
+        ans = answers.get(r["id"], {})
+        base = [r["id"], r["stage"], r["created_at"], r["consent_at"],
+                r["consent_version"], r["finished_at"], r["is_mobile"],
+                r["design_id"]] + [ans.get(c, "") for c in q_cols]
+
+        if r["idx"] is None:
+            w.writerow(base)
+            continue
+
+        choice = r["choice"]
+        left = "B" if r["swapped"] else "A"
+        # 1 / 2 — номер колонки на экране, как видел респондент
+        if choice in ("A", "B"):
+            position = 1 if choice == left else 2
+        else:
+            position = choice or ""
+
+        consistent = ""
+        if r["repeat_of"] is not None:
+            orig = choice_of.get((r["id"], r["repeat_of"]))
+            if choice and orig:
+                consistent = int(choice == orig)
+
+        w.writerow(
+            base
+            + [r["idx"] + 1,
+               "" if r["repeat_of"] is None else r["repeat_of"] + 1,
+               consistent]
+            + [pa.get(c, "") for c in attr_codes] + [pb.get(c, "") for c in attr_codes]
+            + [left, choice or "", position, r["shown_at"] or "",
+               r["answered_at"] or "", r["dwell_ms"] if r["dwell_ms"] is not None else ""]
+        )
+
+    # BOM — чтобы Excel правильно открыл кириллицу
+    return "\ufeff" + out.getvalue()
 
 
 # ─────────────────────────────  инициализация  ─────────────────────────────
@@ -687,3 +797,29 @@ def thanks():
     withdrawn = r["stage"] == "withdrawn"
     session.clear()
     return render_template("thanks.html", withdrawn=withdrawn)
+
+
+@app.route("/results", methods=["GET", "POST"])
+def results():
+    """Выгрузка всех ответов в CSV по ключу из переменной RESULTS_KEY.
+    Ключ передаётся в теле POST, а не в адресе, чтобы не оседать в логах nginx."""
+    if not RESULTS_KEY:
+        abort(404)
+
+    if request.method == "GET":
+        return render_template("results.html")
+
+    key = request.form.get("key", "")
+    if not hmac.compare_digest(key.encode(), RESULTS_KEY.encode()):
+        time.sleep(1)   # замедляет перебор
+        return render_template("results.html", error="Неверный ключ"), 403
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+    return Response(
+        export_csv(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="survey_results_{stamp}.csv"',
+            "Cache-Control": "no-store",
+        },
+    )

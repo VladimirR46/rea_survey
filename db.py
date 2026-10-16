@@ -39,6 +39,15 @@ def init_db(app):
     with open(schema, encoding="utf-8") as f:
         conn.executescript(f.read())
 
+    # CREATE TABLE IF NOT EXISTS не добавляет новые столбцы в старую базу,
+    # поэтому их приходится досоздавать вручную
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(task)")}
+    if "repeat_of" not in cols:
+        try:
+            conn.execute("ALTER TABLE task ADD COLUMN repeat_of INTEGER")
+        except sqlite3.OperationalError:
+            pass   # параллельный воркер успел первым
+
     conn.commit()
     conn.close()
 

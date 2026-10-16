@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS task (
     profile_a_json  TEXT NOT NULL,           -- снимок характеристик, не ссылка
     profile_b_json  TEXT NOT NULL,
     swapped         INTEGER NOT NULL DEFAULT 0,
+    repeat_of       INTEGER,                 -- idx исходного задания, если это повтор
     choice          TEXT,                    -- 'A' | 'B' | 'none'
     shown_at        TEXT,
     answered_at     TEXT,
