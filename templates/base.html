@@ -6,9 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Опрос{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
 </head>
 <body>
-<div class="page">
+<div class="page {% block page_class %}{% endblock %}">
     <header class="header">РЭУ им. Г.В. Плеханова</header>
 
     <main>

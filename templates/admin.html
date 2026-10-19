@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Панель исследователя{% endblock %}
+{% block page_class %}page-wide{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">{% endblock %}
+
+{% block content %}
+<div class="admin">
+
+    <div class="adm-top">
+        <div>
+            <h1>Панель исследователя</h1>
+            <div class="muted">Обновлено {{ s.updated }} МСК</div>
+        </div>
+        <div class="adm-actions">
+            <a class="btn btn-solid" href="{{ url_for('results_csv') }}">Скачать CSV</a>
+            <form method="post" action="{{ url_for('results_logout') }}">
+                <button type="submit" class="btn btn-ghost">Выйти</button>
+            </form>
+        </div>
+    </div>
+
+    {% for cat, msg in get_flashed_messages(with_categories=true) %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+
+    {# ───────── ключевые цифры ───────── #}
+    <div class="kpis">
+        <div class="kpi"><div class="kpi-v">{{ s.kpi.total }}</div><div class="kpi-l">начали опрос</div></div>
+        <div class="kpi"><div class="kpi-v">{{ s.kpi.done }}</div><div class="kpi-l">завершили</div></div>
+        <div class="kpi"><div class="kpi-v">{{ s.kpi.completion }}%</div><div class="kpi-l">доля завершивших</div></div>
+        <div class="kpi"><div class="kpi-v">{{ s.kpi.in_progress }}</div><div class="kpi-l">в процессе или бросили</div></div>
+        <div class="kpi"><div class="kpi-v">{{ s.kpi.median_duration }}</div><div class="kpi-l">медиана прохождения</div></div>
+        <div class="kpi"><div class="kpi-v">{{ s.kpi.mobile }}%</div><div class="kpi-l">с телефона</div></div>
+    </div>
+
+    {% if s.kpi.total == 0 %}
+        <div class="card empty">Пока никто не проходил опрос.</div>
+    {% else %}
+
+    <div class="grid-2">
+        {# ───────── воронка ───────── #}
+        <section class="card">
+            <h2>Воронка</h2>
+            <div class="bars">
+                {% for f in s.funnel %}
+                <div class="bar-row tip" data-tip="{{ f.n }} из {{ s.kpi.total }}">
+                    <div class="bar-label">{{ f.label }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {{ f.pct }}%"></div></div>
+                    <div class="bar-val"><b>{{ f.n }}</b> <span class="muted">{{ f.pct }}%</span></div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {# ───────── по дням ───────── #}
+        <section class="card">
+            <h2>Начали опрос по дням</h2>
+            <div class="cols">
+                {% for d in s.days %}
+                <div class="col tip"
+                     data-tip="{{ d.label }}: начали {{ d.n }}, завершили {{ d.done }}">
+                    <div class="col-fill" style="height: {{ d.h }}%"></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if s.days %}
+            <div class="cols-axis muted"><span>{{ s.days[0].label }}</span><span>{{ s.days[-1].label }}</span></div>
+            {% endif %}
+        </section>
+    </div>
+
+    {# ───────── задания выбора ───────── #}
+    <h2 class="section">Задания выбора</h2>
+
+    <div class="grid-2">
+        <section class="card">
+            <h3>Что выбирали</h3>
+            <div class="muted small">Всего ответов в ситуациях: {{ s.choices_total }}</div>
+            {% if s.choices_total %}
+            <div class="stack">
+                {% for c in s.choice_split %}{% if c.n %}
+                <div class="stack-seg {{ c.key }} tip" style="flex-grow: {{ c.n }}"
+                     data-tip="{{ c.label }}: {{ c.n }} ({{ c.pct }}%)"></div>
+                {% endif %}{% endfor %}
+            </div>
+            <ul class="legend">
+                {% for c in s.choice_split %}
+                <li><span class="sw {{ c.key }}"></span>{{ c.label }} <b>{{ c.pct }}%</b> <span class="muted">({{ c.n }})</span></li>
+                {% endfor %}
+            </ul>
+            <p class="note">Заметный перекос влево или вправо — признак выбора «по месту», а не по содержанию.</p>
+            {% endif %}
+        </section>
+
+        <section class="card">
+            <h3>Повторные ситуации</h3>
+            {% if s.repeat.total %}
+            <div class="big">{{ s.repeat.pct }}%</div>
+            <div class="muted">совпал выбор: {{ s.repeat.ok }} из {{ s.repeat.total }} повторов</div>
+            <p class="note">Повтор — та же пара с переставленными колонками. Низкое совпадение говорит о невнимательных ответах.</p>
+            {% else %}
+            <div class="muted">Пока нет отвеченных повторов.</div>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="card">
+        <h3>Как часто выбирали решение с данной характеристикой</h3>
+        <p class="note">Доля случаев, когда решение с этим уровнем было выбрано, среди всех показов этого уровня. Грубая оценка без модели — для контроля, не для выводов.</p>
+        <div class="levels">
+            {% for a in s.levels %}
+            <div class="level-group">
+                <div class="level-name">{{ a.name }}</div>
+                <div class="bars">
+                    {% for l in a.lv %}
+                    <div class="bar-row tip" data-tip="выбрано {{ l.chosen }} из {{ l.shown }} показов">
+                        <div class="bar-label">{{ l.label }}</div>
+                        <div class="bar-track"><div class="bar-fill" style="width: {{ l.share }}%"></div><div class="bar-mid"></div></div>
+                        <div class="bar-val"><b>{{ l.share }}%</b></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {# ───────── анкета ───────── #}
+    <h2 class="section">Анкета</h2>
+    <div class="grid-2">
+        {% for q in s.survey %}
+        <section class="card">
+            <h3>{{ q.text }}</h3>
+            <div class="muted small">Ответили: {{ q.n }}</div>
+            <div class="bars">
+                {% for b in q.bars %}
+                <div class="bar-row tip" data-tip="{{ b.n }} ({{ b.pct }}%)">
+                    <div class="bar-label">{{ b.label }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {{ b.w }}%"></div></div>
+                    <div class="bar-val"><b>{{ b.n }}</b> <span class="muted">{{ b.pct }}%</span></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if q.others %}
+            <div class="others"><span class="muted">Указали сами:</span> {{ q.others|join("; ") }}</div>
+            {% endif %}
+        </section>
+        {% endfor %}
+    </div>
+
+    {# ───────── респонденты ───────── #}
+    <h2 class="section" id="respondents">Респонденты</h2>
+    <section class="card">
+        <div class="table-tools">
+            <input type="search" id="filter" class="filter" placeholder="Поиск по ID" aria-label="Поиск по ID">
+            <span class="muted small">Всего {{ s.rows|length }}{% if s.kpi.flagged %} · с пометками {{ s.kpi.flagged }}{% endif %}</span>
+        </div>
+        <div class="table-wrap">
+            <table class="resp">
+                <thead>
+                <tr>
+                    <th>ID</th><th>Начал (МСК)</th><th>Этап</th><th>Роль</th>
+                    <th class="num">Ситуации</th><th class="num">Время</th><th class="num">Медиана на ситуацию</th>
+                    <th>Пометки</th><th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in s.rows %}
+                <tr data-id="{{ r.id }}">
+                    <td class="mono nowrap" title="{{ r.id }}">{{ r.short }}{% if r.mobile %} <span class="muted" title="телефон">📱</span>{% endif %}</td>
+                    <td class="nowrap">{{ r.created }}</td>
+                    <td><span class="badge st-{{ r.stage }}">{{ r.stage_label }}</span></td>
+                    <td class="role">{{ r.role }}</td>
+                    <td class="num">{{ r.answered }}/{{ r.total }}</td>
+                    <td class="num">{{ r.duration }}</td>
+                    <td class="num">{{ r.dwell }}</td>
+                    <td>{% for label, why in r.flags %}<span class="flag" title="{{ why }}">⚠ {{ label }}</span>{% endfor %}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('results_delete') }}"
+                              onsubmit="return confirm('Удалить все данные респондента {{ r.short }}? Отменить нельзя.')">
+                            <input type="hidden" name="rid" value="{{ r.id }}">
+                            <button type="submit" class="icon-btn" title="Удалить респондента" aria-label="Удалить респондента {{ r.short }}">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="note">Пометки: «Быстро» — медиана меньше 2 с на ситуацию; «Однообразно» — все ответы в одну колонку или все «Ни одно»; «Повтор» — в повторной ситуации выбор не совпал. Наведите на пометку, чтобы увидеть подробности.</p>
+    </section>
+
+    {% endif %}
+
+    {# ───────── опасная зона ───────── #}
+    <section class="card danger" id="danger">
+        <h3>Очистить базу</h3>
+        <p>Удалит всех респондентов, ответы анкеты и задания. Перед удалением сохраняется резервная копия в <code>data/backups/</code>.</p>
+        <form method="post" action="{{ url_for('results_clear') }}" class="danger-form"
+              onsubmit="return confirm('Точно удалить ВСЕ ответы?')">
+            <input type="text" name="confirm" class="key-input" placeholder="Введите УДАЛИТЬ" aria-label="Подтверждение" autocomplete="off" required>
+            <button type="submit" class="btn btn-danger">Очистить базу</button>
+        </form>
+    </section>
+</div>
+
+<script>
+    // Фильтр таблицы по началу или части ID
+    (function () {
+        var input = document.getElementById("filter");
+        if (!input) return;
+        input.addEventListener("input", function () {
+            var q = input.value.trim().toLowerCase();
+            document.querySelectorAll("table.resp tbody tr").forEach(function (tr) {
+                tr.style.display = !q || tr.dataset.id.indexOf(q) !== -1 ? "" : "none";
+            });
+        });
+    })();
+</script>
+{% endblock %}

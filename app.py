@@ -17,8 +17,10 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from flask import (Flask, Response, abort, redirect, render_template, request,
-                   session, url_for)
+from flask import (Flask, Response, abort, flash, redirect, render_template,
+                   request, session, url_for)
+
+import admin
 
 from db import DB_PATH, get_db, init_db
 from design.generator import generate
@@ -67,8 +69,10 @@ DESIGN_SEED = int(os.environ.get("DESIGN_SEED", "20260901"))
 # колонками — проверка устойчивости ответов. Добавляются сверх N_TASKS.
 N_REPEATS = int(os.environ.get("N_REPEATS", "2"))
 
-# Ключ для страницы выгрузки /results. Пустой — страница выключена.
+# Ключ для панели исследователя /results. Пустой — панель выключена.
 RESULTS_KEY = os.environ.get("RESULTS_KEY", "")
+# Сколько часов действует вход в панель
+ADMIN_HOURS = 12
 
 
 # ─────────────────────────────  утилиты  ─────────────────────────────
@@ -795,25 +799,62 @@ def thanks():
         return redirect_to_stage(r)
 
     withdrawn = r["stage"] == "withdrawn"
-    session.clear()
+    # убираем только респондента: вход в панель исследователя остаётся
+    session.pop("rid", None)
     return render_template("thanks.html", withdrawn=withdrawn)
 
 
-@app.route("/results", methods=["GET", "POST"])
-def results():
-    """Выгрузка всех ответов в CSV по ключу из переменной RESULTS_KEY.
-    Ключ передаётся в теле POST, а не в адресе, чтобы не оседать в логах nginx."""
+# ─────────────────────────────  панель исследователя  ─────────────────────────────
+
+def is_admin():
+    return session.get("admin_until", 0) > time.time()
+
+
+def admin_only():
+    """None — можно продолжать; иначе ответ, который нужно вернуть."""
     if not RESULTS_KEY:
         abort(404)
+    if not is_admin():
+        return redirect(url_for("results"))
+    return None
 
-    if request.method == "GET":
-        return render_template("results.html")
 
+@app.get("/results")
+def results():
+    """Вход по ключу, после входа — сводка, выгрузка и управление данными."""
+    if not RESULTS_KEY:
+        abort(404)
+    if not is_admin():
+        return render_template("admin_login.html")
+    stats = admin.compute(get_db(), QUESTIONS, DESIGN_SPEC["attributes"])
+    return render_template("admin.html", s=stats)
+
+
+@app.post("/results/login")
+def results_login():
+    """Ключ передаётся в теле POST, а не в адресе, чтобы не оседать в логах."""
+    if not RESULTS_KEY:
+        abort(404)
     key = request.form.get("key", "")
     if not hmac.compare_digest(key.encode(), RESULTS_KEY.encode()):
         time.sleep(1)   # замедляет перебор
-        return render_template("results.html", error="Неверный ключ"), 403
+        return render_template("admin_login.html", error="Неверный ключ"), 403
+    session["admin_until"] = time.time() + ADMIN_HOURS * 3600
+    session.permanent = True
+    return redirect(url_for("results"))
 
+
+@app.post("/results/logout")
+def results_logout():
+    session.pop("admin_until", None)
+    return redirect(url_for("results"))
+
+
+@app.get("/results/csv")
+def results_csv():
+    denied = admin_only()
+    if denied:
+        return denied
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     return Response(
         export_csv(),
@@ -823,3 +864,29 @@ def results():
             "Cache-Control": "no-store",
         },
     )
+
+
+@app.post("/results/delete")
+def results_delete():
+    denied = admin_only()
+    if denied:
+        return denied
+    rid = (request.form.get("rid") or "").strip()
+    if admin.delete_respondent(get_db(), rid):
+        flash(f"Респондент {rid[:8]} удалён", "ok")
+    else:
+        flash("Такого респондента нет", "error")
+    return redirect(url_for("results") + "#respondents")
+
+
+@app.post("/results/clear")
+def results_clear():
+    denied = admin_only()
+    if denied:
+        return denied
+    if (request.form.get("confirm") or "").strip().upper() != "УДАЛИТЬ":
+        flash("База не очищена: нужно ввести слово УДАЛИТЬ", "error")
+        return redirect(url_for("results") + "#danger")
+    name = admin.clear_all(get_db(), DB_PATH)
+    flash(f"База очищена. Резервная копия: data/backups/{name}", "ok")
+    return redirect(url_for("results"))
