@@ -398,6 +398,7 @@ body:has(.compare) .error {
 .page.page-text .ex-name { padding: 7px 14px; }
 .page.page-text .ex-cell { padding: 8px 14px 9px; line-height: 1.4; }
 .page.page-text .nav { margin-top: 18px; }
+.page.page-text .question-hint { margin: -4px 0 18px; }
 .page.page-text .btn-primary, .page.page-text .btn-secondary { padding-top: 13px; padding-bottom: 13px; }
 
 .ex-table { display: flex; flex-direction: column; gap: 10px; }

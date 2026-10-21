@@ -16,6 +16,7 @@ STAGE_LABELS = {
     "survey": "Анкета",
     "intro": "Инструкция",
     "tasks": "Задания",
+    "post": "Финальные вопросы",
     "done": "Завершил",
     "withdrawn": "Отказался",
 }
@@ -162,7 +163,7 @@ def compute(db, questions, attributes):
     kpi = {
         "total": total,
         "done": done,
-        "in_progress": sum(stage_n.get(s, 0) for s in ("survey", "intro", "tasks")),
+        "in_progress": sum(stage_n.get(s, 0) for s in ("survey", "intro", "tasks", "post")),
         "completion": _pct(done, total),
         "median_duration": fmt_duration(statistics.median(durations)) if durations else "—",
         "mobile": _pct(mobile, total),
@@ -170,12 +171,14 @@ def compute(db, questions, attributes):
     }
 
     # ── воронка ──
-    after_survey = sum(stage_n.get(s, 0) for s in ("intro", "tasks", "done"))
-    in_tasks = sum(stage_n.get(s, 0) for s in ("tasks", "done"))
+    after_survey = sum(stage_n.get(s, 0) for s in ("intro", "tasks", "post", "done"))
+    in_tasks = sum(stage_n.get(s, 0) for s in ("tasks", "post", "done"))
+    after_tasks = sum(stage_n.get(s, 0) for s in ("post", "done"))
     funnel = [
         {"label": "Дали согласие", "n": total},
         {"label": "Ответили на анкету", "n": after_survey},
         {"label": "Перешли к заданиям", "n": in_tasks},
+        {"label": "Прошли все ситуации", "n": after_tasks},
         {"label": "Завершили опрос", "n": done},
     ]
     for f in funnel:

@@ -50,7 +50,11 @@ app.config.update(
 CONSENT_VERSION = "v1"
 
 with open(os.path.join(BASE_DIR, "design/questions.json"), encoding="utf-8") as f:
-    QUESTIONS = json.load(f)["questions"]
+    _ALL_QUESTIONS = json.load(f)["questions"]
+
+# Анкета до заданий и вопросы после них ("after_tasks": true в questions.json)
+QUESTIONS = [q for q in _ALL_QUESTIONS if not q.get("after_tasks")]
+POST_QUESTIONS = [q for q in _ALL_QUESTIONS if q.get("after_tasks")]
 
 with open(os.path.join(BASE_DIR, "design/attributes.json"), encoding="utf-8") as f:
     ATTRIBUTES = json.load(f)["attributes"]
@@ -324,15 +328,20 @@ def prune_hidden_answers(rid):
 
 
 def finish_tasks(rid):
+    """Задания пройдены: дальше заключительные вопросы, если они есть."""
+    if POST_QUESTIONS:
+        _set_step(rid, 0, stage="post")
+        return redirect(url_for("post_question", idx=0))
+    return finish_all(rid)
+
+
+def finish_all(rid):
     """Завершение опроса: этап done и отметка времени."""
     db = get_db()
-    total = db.execute(
-        "SELECT COUNT(*) c FROM task WHERE respondent_id = ?", (rid,)
-    ).fetchone()["c"]
     db.execute("UPDATE respondent SET finished_at = ? WHERE id = ? "
                "AND finished_at IS NULL", (now(), rid))
     db.commit()
-    _set_step(rid, total, stage="done")
+    _set_step(rid, 0, stage="done")
     return redirect(url_for("thanks"))
 
 
@@ -353,6 +362,8 @@ def redirect_to_stage(r):
         return redirect(url_for("tasks_intro"))
     if stage == "tasks":
         return redirect(url_for("task", idx=r["step"]))
+    if stage == "post":
+        return redirect(url_for("post_question", idx=r["step"]))
     return redirect(url_for("thanks"))
 
 
@@ -396,7 +407,7 @@ def export_csv():
     db = get_db()
 
     q_cols = []
-    for q in QUESTIONS:
+    for q in QUESTIONS + POST_QUESTIONS:
         q_cols.append(q["code"])
         if other_option(q):
             q_cols.append(q["code"] + OTHER_SUFFIX)
@@ -831,6 +842,59 @@ def task_submit(idx):
     return redirect(url_for("task", idx=idx + 1))
 
 
+@app.route("/post/<int:idx>", methods=["GET", "POST"])
+def post_question(idx):
+    """Заключительные вопросы после заданий. Без ветвления и без «Другое»,
+    поэтому обработка проще, чем у анкеты. Назад в задания не пускаем:
+    выбор там уже сделан."""
+    r = current_respondent()
+    if r is None:
+        return redirect(url_for("index"))
+    if r["stage"] != "post":
+        return redirect_to_stage(r)
+    if idx != r["step"]:
+        return redirect(url_for("post_question", idx=r["step"]))
+    if idx >= len(POST_QUESTIONS):
+        return finish_all(r["id"])
+
+    question = POST_QUESTIONS[idx]
+
+    def page(selected=None, error=None, status=200):
+        return render_template(
+            "question.html", question=question, idx=idx,
+            pos=idx + 1, total=len(POST_QUESTIONS),
+            progress_label="Заключительные вопросы",
+            selected=selected, other_value=None, has_prev=idx > 0,
+            action=url_for("post_question", idx=idx), error=error,
+        ), status
+
+    if request.method == "GET":
+        return page(selected=get_answers(r["id"]).get(question["code"]))
+
+    if request.form.get("action") == "back":
+        target = max(idx - 1, 0)
+        _set_step(r["id"], target)
+        return redirect(url_for("post_question", idx=target))
+
+    value = request.form.get("value")
+    if value not in {o["value"] for o in question["options"]}:
+        return page(error="Выберите один из вариантов", status=400)
+
+    db = get_db()
+    db.execute(
+        """INSERT OR REPLACE INTO survey_answer
+               (respondent_id, question_code, value, answered_at)
+           VALUES (?, ?, ?, ?)""",
+        (r["id"], question["code"], value, now()),
+    )
+    db.commit()
+
+    if idx + 1 >= len(POST_QUESTIONS):
+        return finish_all(r["id"])
+    _set_step(r["id"], idx + 1)
+    return redirect(url_for("post_question", idx=idx + 1))
+
+
 @app.get("/thanks")
 def thanks():
     """Финальная страница. Сессия очищается только здесь и только у того,
@@ -870,7 +934,7 @@ def results():
         abort(404)
     if not is_admin():
         return render_template("admin_login.html")
-    stats = admin.compute(get_db(), QUESTIONS, DESIGN_SPEC["attributes"])
+    stats = admin.compute(get_db(), QUESTIONS + POST_QUESTIONS, DESIGN_SPEC["attributes"])
     return render_template("admin.html", s=stats)
 
 

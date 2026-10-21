@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% block page_class %}page-text{% endblock %}
 {% block title %}Вопрос {{ pos }}{% endblock %}
 
 {% block content %}
-    <div class="progress">Вопрос {{ pos }} из {{ total }}</div>
+    <div class="progress">{% if progress_label %}{{ progress_label }}: {{ pos }} из {{ total }}{% else %}Вопрос {{ pos }} из {{ total }}{% endif %}</div>
 
     <h1 class="question-text">{{ question.text }}</h1>
 
@@ -10,7 +11,7 @@
 
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
-    <form method="post" action="{{ url_for('survey_submit', idx=idx) }}">
+    <form method="post" action="{{ action or url_for('survey_submit', idx=idx) }}">
         <div class="options">
             {% for opt in question.options %}
                 {% if opt.other %}

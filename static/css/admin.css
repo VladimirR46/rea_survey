@@ -137,7 +137,7 @@ table.resp { width: 100%; min-width: 860px; border-collapse: collapse; font-size
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
 .st-done { background: #e3f4e5; color: #1d5e26; }
-.st-tasks, .st-intro { background: #e7effa; color: #1c4b8a; }
+.st-tasks, .st-intro, .st-post { background: #e7effa; color: #1c4b8a; }
 .st-survey { background: #f0f0ee; color: #555; }
 .st-withdrawn { background: #fdecea; color: #8a2a20; }
 .flag { display: inline-block; padding: 2px 8px; margin: 1px 4px 1px 0; border-radius: 10px;
