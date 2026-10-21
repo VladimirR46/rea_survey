@@ -74,6 +74,15 @@ RESULTS_KEY = os.environ.get("RESULTS_KEY", "")
 # Сколько часов действует вход в панель
 ADMIN_HOURS = 12
 
+# Пара для экрана-примера перед заданиями. Коды уровней из attributes.json.
+# Сюда, а не в attributes.json: правка того файла создала бы новый design_id.
+EXAMPLE_PAIR = (
+    {"function": "support", "time_saving": "t10",
+     "explainability": "brief", "training_time": "h8"},
+    {"function": "draft", "time_saving": "t30",
+     "explainability": "brief", "training_time": "h8"},
+)
+
 
 # ─────────────────────────────  утилиты  ─────────────────────────────
 
@@ -338,6 +347,9 @@ def redirect_to_stage(r):
     if stage == "survey":
         return redirect(url_for("survey", idx=r["step"]))
     if stage == "intro":
+        # в инструкции два экрана: step 0 — текст, step 1 — пример таблицы
+        if r["step"] == 1:
+            return redirect(url_for("tasks_example"))
         return redirect(url_for("tasks_intro"))
     if stage == "tasks":
         return redirect(url_for("task", idx=r["step"]))
@@ -648,7 +660,7 @@ def tasks_intro():
     r = current_respondent()
     if r is None:
         return redirect(url_for("index"))
-    if r["stage"] != "intro":
+    if r["stage"] != "intro" or r["step"] != 0:
         return redirect_to_stage(r)
 
     if request.method == "POST":
@@ -660,14 +672,46 @@ def tasks_intro():
                 return redirect(url_for("survey", idx=target))
             return redirect(url_for("tasks_intro"))
 
-        # step обнуляется: теперь это номер задания, а не вопроса
-        _set_step(r["id"], 0, stage="tasks")
-        return redirect(url_for("task", idx=0))
+        _set_step(r["id"], 1)
+        return redirect(url_for("tasks_example"))
 
     total = get_db().execute(
         "SELECT COUNT(*) c FROM task WHERE respondent_id = ?", (r["id"],)
     ).fetchone()["c"]
-    return render_template("task_intro.html", total=total)
+    return render_template("task_intro.html", total=total,
+                           attributes=DESIGN_SPEC["attributes"])
+
+
+def example_rows():
+    """Строки таблицы-примера. Если кода нет в текущих характеристиках,
+    берётся первый уровень, чтобы пример не ломался после правок json."""
+    left, right = ({}, {})
+    for attr in DESIGN_SPEC["attributes"]:
+        codes = [l["value"] for l in attr["levels"]]
+        for src, dst in zip(EXAMPLE_PAIR, (left, right)):
+            value = src.get(attr["code"])
+            dst[attr["code"]] = value if value in codes else codes[0]
+    return build_rows(left, right)
+
+
+@app.route("/tasks/example", methods=["GET", "POST"])
+def tasks_example():
+    """Пример таблицы: где какие характеристики. Второй экран инструкции."""
+    r = current_respondent()
+    if r is None:
+        return redirect(url_for("index"))
+    if r["stage"] != "intro" or r["step"] != 1:
+        return redirect_to_stage(r)
+
+    if request.method == "POST":
+        if request.form.get("action") == "back":
+            _set_step(r["id"], 0)
+            return redirect(url_for("tasks_intro"))
+        # step обнуляется: теперь это номер задания
+        _set_step(r["id"], 0, stage="tasks")
+        return redirect(url_for("task", idx=0))
+
+    return render_template("task_example.html", rows=example_rows())
 
 
 @app.get("/tasks")

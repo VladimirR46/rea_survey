@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block page_class %}page-text{% endblock %}
+{% block title %}Пример ситуации выбора{% endblock %}
+
+{% block content %}
+    <h1>Пример ситуации выбора</h1>
+
+    <p class="ex-intro">Ниже представлен характерный вид таблицы с двумя
+    ИИ-решениями. Обратите внимание на расположение характеристик в таблице.
+    Значения характеристик будут различаться между ситуациями.</p>
+
+    <!-- только образец: здесь ничего не выбирается -->
+    <div class="ex-table" aria-label="Пример таблицы с двумя ИИ-решениями">
+        <div class="ex-head">
+            <div>ИИ-решение 1</div>
+            <div>ИИ-решение 2</div>
+        </div>
+
+        {% for row in rows %}
+            <div class="ex-attr attr-c{{ loop.index }}">
+                <div class="ex-name"><span class="attr-num">{{ loop.index }}</span>{{ row.name }}</div>
+                <div class="ex-cells">
+                    {% for v in (row.left, row.right) %}
+                        <div class="ex-cell">
+                            {% if v.detail %}
+                                <span class="cmp-lead">{{ v.label }}:</span>
+                                {% for line in v.detail %}<span class="cmp-line">– {{ line }}</span>{% endfor %}
+                            {% else %}
+                                {{ v.label }}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{{ url_for('tasks_example') }}">
+        <div class="nav">
+            <button type="submit" name="action" value="back"
+                    class="btn-secondary">Назад</button>
+            <button type="submit" class="btn-primary">Всё понятно, перейти к выбору</button>
+        </div>
+    </form>
+{% endblock %}

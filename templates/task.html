@@ -27,7 +27,7 @@
             <div class="cmp-head cmp-col-2">ИИ-решение 2</div>
 
             {% for row in rows %}
-                <div class="cmp-attr">{{ row.name }}</div>
+                <div class="cmp-attr attr-c{{ loop.index }}">{{ row.name }}</div>
 
                 <div class="cmp-cell cmp-col-1">
                     <span class="cmp-value">
