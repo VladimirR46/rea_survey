@@ -217,11 +217,11 @@ body:has(.compare) .footer { margin: 0; }
     grid-column: 1 / -1;
     padding: calc(10px * var(--fit)) 14px calc(5px * var(--fit));
     font-size: calc(15px * var(--fit));
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.35;
     color: var(--text);
-    /* цвет характеристики — как в инструкции (.attr-cN ниже) */
-    background: var(--tint, #f7f8fa);
+    /* без цвета: цвет мог бы влиять на выбор */
+    background: #f4f5f7;
 }
 
 .cmp-cell {
@@ -292,7 +292,7 @@ body:has(.compare) .error {
 
     .compare { margin-bottom: 16px; }
     .cmp-head { padding: 9px 10px; font-size: 13px; }
-    .cmp-attr { padding: 8px 10px; font-size: 13px; }
+    .cmp-attr { padding: 8px 10px; font-size: 14px; }
     .cmp-cell { padding: 7px 10px 11px; font-size: 13px; line-height: 1.4; }
 
     .task-title { font-size: 18px; line-height: 1.3; margin-bottom: 12px; }
