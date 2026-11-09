@@ -1,0 +1,33 @@
+{% from "_icons.html" import icon %}
+{# Таблица сравнения трёх сервисов. Каждая колонка — один label:
+   клик в любом месте колонки выбирает сервис.
+   name — имя поля формы; для примера своё, оно никуда не отправляется. #}
+{% macro compare(rows, name="choice", required=true) -%}
+<div class="cmp" style="--rows: {{ rows|length }}">
+    {% for row in rows %}
+    <div class="cmp-attr" style="--r: {{ loop.index }}">
+        <span class="cmp-ico">{{ icon(row.icon) }}</span>
+        <span class="cmp-name">{{ row.name }}</span>
+        {% if row.description %}
+        <span class="cmp-info" tabindex="0" aria-label="{{ row.description }}">{{ icon("info") }}<span class="cmp-tip" role="tooltip">{{ row.description }}</span></span>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% for label in column_labels %}
+    {% set col = loop.index %}
+    <label class="alt alt-{{ col }}">
+        <input type="radio" name="{{ name }}" value="{{ col }}" class="sr" {% if required %}required{% endif %}>
+        <span class="alt-head">
+            <span class="alt-letter">{{ label[-1] }}</span>
+            <span class="alt-name">{{ label }}</span>
+            <span class="alt-check">{{ icon("check") }}</span>
+        </span>
+        {% for row in rows %}
+        {% set v = row.cells[col - 1] %}
+        <span class="alt-cell" style="--r: {{ loop.index }}"><span class="alt-pre">{{ v.pre }}</span><b>{{ v.em }}</b></span>
+        {% endfor %}
+    </label>
+    {% endfor %}
+</div>
+{%- endmacro %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Вход — панель исследователя{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">{% endblock %}
+
+{% block content %}
+    <div class="login-card">
+        <h1>Панель исследователя</h1>
+        <p class="login-sub">Сводка ответов, выгрузка и управление данными опроса.</p>
+
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+        <form method="post" action="{{ url_for('results_login') }}">
+            <label class="field-label" for="key">Ключ доступа</label>
+            <input type="password" name="key" id="key" class="key-input"
+                   autocomplete="current-password" required autofocus>
+            <button type="submit" class="btn-primary">Войти</button>
+        </form>
+    </div>
+{% endblock %}

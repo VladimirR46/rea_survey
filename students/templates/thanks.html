@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{% if withdrawn %}Участие прекращено{% else %}Спасибо за участие{% endif %}{% endblock %}
+{% block body_class %}is-thanks{% endblock %}
+
+{% block content %}
+<section class="card thanks rise">
+    {% if withdrawn %}
+        <h1 class="display small">Участие прекращено</h1>
+        <div class="prose">
+            <p>Вы прекратили заполнение анкеты. Уже сохранённые ответы будут
+            исключены из анализа.</p>
+            <p>Благодарим за уделённое время.</p>
+        </div>
+    {% else %}
+        <div class="done-badge" aria-hidden="true">
+            <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg>
+        </div>
+        <h1 class="display small">Спасибо за участие!</h1>
+        <div class="prose">
+            <p>Ваши ответы сохранены. Благодарим за уделённое время и вклад
+            в исследование.</p>
+            <p>Полученные данные будут использованы исключительно в научных
+            целях в обезличенном виде. Эту страницу можно закрыть.</p>
+        </div>
+    {% endif %}
+</section>
+
+{% if not withdrawn %}
+<canvas id="confetti" aria-hidden="true"></canvas>
+<script>
+// небольшой салют из конфетти, один раз
+(function () {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c = document.getElementById("confetti"), x = c.getContext("2d");
+    var W, H, parts = [], colors = ["#6d4aff", "#a78bfa", "#22c3e6", "#ff7ab6", "#ffc94d", "#34d399"];
+    function size() { W = c.width = innerWidth * devicePixelRatio; H = c.height = innerHeight * devicePixelRatio; }
+    size(); addEventListener("resize", size);
+    for (var i = 0; i < 140; i++) {
+        parts.push({
+            x: W / 2, y: H * 0.35,
+            vx: (Math.random() - 0.5) * 22 * devicePixelRatio,
+            vy: (-Math.random() * 18 - 6) * devicePixelRatio,
+            s: (5 + Math.random() * 7) * devicePixelRatio,
+            r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3,
+            c: colors[i % colors.length]
+        });
+    }
+    var t0 = performance.now();
+    (function frame(t) {
+        x.clearRect(0, 0, W, H);
+        var alive = false;
+        parts.forEach(function (p) {
+            p.vy += 0.5 * devicePixelRatio; p.vx *= 0.985;
+            p.x += p.vx; p.y += p.vy; p.r += p.vr;
+            if (p.y < H + 20) alive = true;
+            x.save(); x.translate(p.x, p.y); x.rotate(p.r);
+            x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+            x.restore();
+        });
+        if (alive && t - t0 < 6000) requestAnimationFrame(frame); else x.clearRect(0, 0, W, H);
+    })(t0);
+})();
+</script>
+{% endif %}
+{% endblock %}

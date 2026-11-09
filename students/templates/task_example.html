@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_compare.html" import compare with context %}
+{% block title %}Пример ситуации{% endblock %}
+{% block body_class %}is-task is-example{% endblock %}
+{% block wrap_class %}wrap-task{% endblock %}
+
+{% block content %}
+<div class="task rise">
+    <div class="eyebrow">Пример</div>
+    <h1 class="task-title">Так будет выглядеть каждая ситуация выбора</h1>
+
+    <ol class="howto">
+        <li><span class="howto-n">1</span><span><b>Строки</b> — шесть характеристик. Наведите на {{ icon("info") }}, чтобы прочитать описание</span></li>
+        <li><span class="howto-n">2</span><span><b>Колонки</b> — три сервиса. «Как у ChatGPT» — значит так же, как, по-вашему, у ChatGPT</span></li>
+        <li><span class="howto-n">3</span><span><b>Попробуйте:</b> нажмите на колонку — здесь выбор никуда не записывается</span></li>
+    </ol>
+
+    <div class="scenario">{{ icon("book") }}<span><b>Ситуация:</b> {{ scenario }}</span></div>
+
+    <form method="post" action="{{ url_for('tasks_example') }}">
+        {{ compare(rows, name="demo", required=false) }}
+
+        <div class="task-actions">
+            <button type="submit" class="btn btn-primary" id="go">Всё понятно, начать {{ icon("arrow") }}</button>
+            <button type="submit" name="action" value="back" class="btn btn-ghost">{{ icon("back") }} Назад</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

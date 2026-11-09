@@ -1,0 +1,117 @@
+{
+  "version": "v1",
+  "questions": [
+    {
+      "code": "edu_level",
+      "text": "На каком уровне вы сейчас обучаетесь?",
+      "options": [
+        {"value": "spo", "label": "Среднее профессиональное образование", "hint": "колледж, техникум"},
+        {"value": "bachelor", "label": "Бакалавриат"},
+        {"value": "specialist", "label": "Специалитет"},
+        {"value": "master", "label": "Магистратура"},
+        {"value": "phd", "label": "Аспирантура"}
+      ]
+    },
+    {
+      "code": "course",
+      "text": "На каком курсе вы учитесь?",
+      "hint": "Укажите курс на текущем уровне обучения.",
+      "options": [
+        {"value": "1", "label": "1 курс"},
+        {"value": "2", "label": "2 курс"},
+        {"value": "3", "label": "3 курс"},
+        {"value": "4", "label": "4 курс"},
+        {"value": "5plus", "label": "5 курс и старше"}
+      ]
+    },
+    {
+      "code": "field",
+      "text": "К какой области относится ваше направление подготовки?",
+      "options": [
+        {"value": "economics", "label": "Экономика, финансы, учёт"},
+        {"value": "management", "label": "Менеджмент и управление", "hint": "в том числе государственное и муниципальное управление, управление персоналом"},
+        {"value": "marketing", "label": "Маркетинг, реклама, торговля, логистика"},
+        {"value": "it", "label": "Информационные технологии и анализ данных", "hint": "в том числе бизнес-информатика, прикладная математика"},
+        {"value": "law", "label": "Юриспруденция"},
+        {"value": "humanities", "label": "Гуманитарные и социальные науки", "hint": "психология, социология, лингвистика, философия и др."},
+        {"value": "tech", "label": "Технологии и товароведение", "hint": "в том числе пищевые технологии, гостиничное дело, туризм"},
+        {"value": "other", "label": "Другое", "other": true, "other_placeholder": "Укажите направление"}
+      ]
+    },
+    {
+      "code": "gender",
+      "text": "Укажите ваш пол",
+      "options": [
+        {"value": "male", "label": "Мужской"},
+        {"value": "female", "label": "Женский"}
+      ]
+    },
+    {
+      "code": "llm_duration",
+      "text": "Как давно вы пользуетесь ЛЛМ-сервисами?",
+      "hint": "ЛЛМ-сервисы (на основе больших языковых моделей) — это чат-помощники, которые отвечают на вопросы, объясняют материал и пишут тексты: ChatGPT, GigaChat, Алиса AI, DeepSeek и другие.",
+      "options": [
+        {"value": "never", "label": "Не пользуюсь"},
+        {"value": "lt6m", "label": "Менее полугода"},
+        {"value": "6_12m", "label": "От полугода до года"},
+        {"value": "1_2y", "label": "От 1 до 2 лет"},
+        {"value": "gt2y", "label": "Более 2 лет"}
+      ]
+    },
+    {
+      "code": "study_freq",
+      "text": "Как часто вы используете ЛЛМ-сервисы для учёбы?",
+      "skip_if": {"question": "llm_duration", "value": "never"},
+      "options": [
+        {"value": "never", "label": "Не использую для учёбы"},
+        {"value": "rarely", "label": "Реже раза в месяц"},
+        {"value": "monthly", "label": "Несколько раз в месяц"},
+        {"value": "weekly", "label": "Несколько раз в неделю"},
+        {"value": "daily", "label": "Ежедневно или почти ежедневно"}
+      ]
+    },
+    {
+      "code": "paid",
+      "text": "Платили ли вы за подписку или доступ к ЛЛМ-сервису?",
+      "skip_if": {"question": "llm_duration", "value": "never"},
+      "options": [
+        {"value": "now", "label": "Да, сейчас пользуюсь платной подпиской"},
+        {"value": "past", "label": "Да, раньше, но сейчас нет"},
+        {"value": "no", "label": "Нет, пользуюсь только бесплатными версиями"}
+      ]
+    },
+    {
+      "code": "brand",
+      "type": "grid",
+      "text": "Насколько вы знакомы с каждым из этих сервисов?",
+      "hint": "Отметьте по одному варианту в каждой строке.",
+      "rows": [
+        {"value": "gigachat", "label": "GigaChat", "hint": "Сбер"},
+        {"value": "alice", "label": "Алиса AI", "hint": "Яндекс"},
+        {"value": "chatgpt", "label": "ChatGPT", "hint": "OpenAI"},
+        {"value": "claude", "label": "Claude", "hint": "Anthropic"},
+        {"value": "deepseek", "label": "DeepSeek"}
+      ],
+      "options": [
+        {"value": "unknown", "label": "Не знаю такой сервис"},
+        {"value": "heard", "label": "Слышал(а), но не пользовался(ась)"},
+        {"value": "tried", "label": "Пробовал(а) несколько раз"},
+        {"value": "sometimes", "label": "Пользуюсь время от времени"},
+        {"value": "regular", "label": "Пользуюсь регулярно"}
+      ]
+    },
+    {
+      "code": "main_service",
+      "text": "Каким ЛЛМ-сервисом вы пользуетесь чаще всего?",
+      "skip_if": {"question": "llm_duration", "value": "never"},
+      "options": [
+        {"value": "gigachat", "label": "GigaChat"},
+        {"value": "alice", "label": "Алиса AI"},
+        {"value": "chatgpt", "label": "ChatGPT"},
+        {"value": "claude", "label": "Claude"},
+        {"value": "deepseek", "label": "DeepSeek"},
+        {"value": "other", "label": "Другим сервисом", "other": true, "other_placeholder": "Каким именно"}
+      ]
+    }
+  ]
+}

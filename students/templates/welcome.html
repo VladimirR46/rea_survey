@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Добро пожаловать{% endblock %}
+{% block body_class %}is-welcome{% endblock %}
+
+{% block content %}
+<section class="hero rise">
+    <div class="hero-text">
+        <span class="pill">{{ icon("sparkle") }} Исследование для студентов</span>
+        <h1 class="display">Какой <span class="nw">ИИ-помощник</span> вы&nbsp;бы&nbsp;выбрали?</h1>
+        <p class="lead">Помогите понять, что важнее всего студентам в ЛЛМ-сервисах:
+            точность, объяснения, экономия времени, цена, доступ или защита данных.</p>
+        <ul class="meta">
+            <li>{{ icon("timer") }} около 10 минут</li>
+            <li>{{ icon("cards") }} {{ n_tasks }} {{ plural_ru(n_tasks, "ситуация", "ситуации", "ситуаций") }} выбора</li>
+            <li>{{ icon("lock") }} анонимно</li>
+        </ul>
+    </div>
+
+    <!-- картинка-подсказка: три сервиса, один выбран -->
+    <div class="hero-art" aria-hidden="true">
+        {% set widths = [[82, 60, 74, 48, 66, 56], [70, 88, 58, 76, 52, 80], [64, 50, 86, 62, 78, 46]] %}
+        {% for L in ["А", "Б", "В"] %}
+        <div class="mini mini-{{ loop.index }}{% if loop.index == 2 %} is-picked{% endif %}">
+            <div class="mini-head"><span class="mini-letter">{{ L }}</span><span class="mini-check">{{ icon("check") }}</span></div>
+            {% for w in widths[loop.index0] %}<i style="width: {{ w }}%"></i>{% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card consent rise" style="--d: 1">
+    <h2>Информированное согласие</h2>
+    <div class="prose">
+        {% include "content/consent.html" %}
+    </div>
+    <!-- POST, а не ссылка: согласие — это действие, его нужно зафиксировать -->
+    <form method="post" action="{{ url_for('start') }}">
+        <button type="submit" class="btn btn-primary btn-lg">
+            Я согласен(на) принять участие {{ icon("arrow") }}
+        </button>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,83 @@
+{
+  "version": "v1",
+  "attributes": [
+    {
+      "code": "accuracy",
+      "name": "Точность ответов",
+      "icon": "target",
+      "description": "Корректность фактов, расчётов и решений; отсутствие ошибок и вымышленной информации.",
+      "levels": [
+        {"value": "gigachat", "label": "Как у GigaChat", "em": "GigaChat"},
+        {"value": "alice", "label": "Как у Алисы AI", "em": "Алисы AI"},
+        {"value": "chatgpt", "label": "Как у ChatGPT", "em": "ChatGPT"},
+        {"value": "claude", "label": "Как у Claude", "em": "Claude"},
+        {"value": "deepseek", "label": "Как у DeepSeek", "em": "DeepSeek"}
+      ]
+    },
+    {
+      "code": "explanations",
+      "name": "Качество объяснений",
+      "icon": "bulb",
+      "description": "Понятность и последовательность объяснений, помогающих разобраться в теме.",
+      "levels": [
+        {"value": "gigachat", "label": "Как у GigaChat", "em": "GigaChat"},
+        {"value": "alice", "label": "Как у Алисы AI", "em": "Алисы AI"},
+        {"value": "chatgpt", "label": "Как у ChatGPT", "em": "ChatGPT"},
+        {"value": "claude", "label": "Как у Claude", "em": "Claude"},
+        {"value": "deepseek", "label": "Как у DeepSeek", "em": "DeepSeek"}
+      ]
+    },
+    {
+      "code": "time_saving",
+      "name": "Экономия времени",
+      "icon": "clock",
+      "description": "Ускорение выполнения учебных задач и сокращение времени на рутинную работу.",
+      "levels": [
+        {"value": "gigachat", "label": "Как у GigaChat", "em": "GigaChat"},
+        {"value": "alice", "label": "Как у Алисы AI", "em": "Алисы AI"},
+        {"value": "chatgpt", "label": "Как у ChatGPT", "em": "ChatGPT"},
+        {"value": "claude", "label": "Как у Claude", "em": "Claude"},
+        {"value": "deepseek", "label": "Как у DeepSeek", "em": "DeepSeek"}
+      ]
+    },
+    {
+      "code": "cost",
+      "name": "Стоимость использования",
+      "icon": "wallet",
+      "description": "Расходы на доступ к необходимым функциям и возможностям сервиса.",
+      "levels": [
+        {"value": "gigachat", "label": "Как у GigaChat", "em": "GigaChat"},
+        {"value": "alice", "label": "Как у Алисы AI", "em": "Алисы AI"},
+        {"value": "chatgpt", "label": "Как у ChatGPT", "em": "ChatGPT"},
+        {"value": "claude", "label": "Как у Claude", "em": "Claude"},
+        {"value": "deepseek", "label": "Как у DeepSeek", "em": "DeepSeek"}
+      ]
+    },
+    {
+      "code": "access",
+      "name": "Простота доступа",
+      "icon": "key",
+      "description": "Лёгкость регистрации и подключения из России, включая необходимость VPN.",
+      "levels": [
+        {"value": "gigachat", "label": "Как у GigaChat", "em": "GigaChat"},
+        {"value": "alice", "label": "Как у Алисы AI", "em": "Алисы AI"},
+        {"value": "chatgpt", "label": "Как у ChatGPT", "em": "ChatGPT"},
+        {"value": "claude", "label": "Как у Claude", "em": "Claude"},
+        {"value": "deepseek", "label": "Как у DeepSeek", "em": "DeepSeek"}
+      ]
+    },
+    {
+      "code": "privacy",
+      "name": "Конфиденциальность данных",
+      "icon": "shield",
+      "description": "Защита запросов, переписки и документов от нежелательного использования и передачи третьим лицам.",
+      "levels": [
+        {"value": "gigachat", "label": "Как у GigaChat", "em": "GigaChat"},
+        {"value": "alice", "label": "Как у Алисы AI", "em": "Алисы AI"},
+        {"value": "chatgpt", "label": "Как у ChatGPT", "em": "ChatGPT"},
+        {"value": "claude", "label": "Как у Claude", "em": "Claude"},
+        {"value": "deepseek", "label": "Как у DeepSeek", "em": "DeepSeek"}
+      ]
+    }
+  ]
+}

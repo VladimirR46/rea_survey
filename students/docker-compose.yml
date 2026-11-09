@@ -1,0 +1,35 @@
+# Опрос студентов — отдельный контейнер рядом с опросом врачей.
+# Запуск из этой папки: docker compose up --build
+# Локально: http://localhost:8001/students
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      # 8000 занят опросом врачей, поэтому 8001.
+      # Только для nginx на этом же сервере, снаружи порт закрыт
+      - "127.0.0.1:8001:8000"
+    volumes:
+      # код с диска: после git pull правки подхватываются сами
+      - ./:/app
+      # своя база в students/data, с опросом врачей не пересекается
+      - ./data:/data
+    # Правки здесь --reload НЕ подхватывает: после изменения выполните
+    # `docker compose up -d`, чтобы контейнер пересоздался
+    environment:
+      SCRIPT_NAME: /students
+      # Ключ подписи кук. На сервере — в students/.env (он не в git):
+      # echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+      SECRET_KEY: ${SECRET_KEY:-dev-only-not-for-production}
+      SESSION_DAYS: 14
+      DESIGN_MODE: individual
+      # 10 уникальных ситуаций + 2 повтора в конце = 12
+      N_TASKS: 10
+      N_REPEATS: 2
+      DESIGN_SEED: 20261109
+      # Ключ панели /students/results. Задаётся в .env:
+      # echo "RESULTS_KEY=$(openssl rand -hex 12)" >> .env
+      # Пустой — панель выключена (404)
+      RESULTS_KEY: ${RESULTS_KEY:-}
+    # --threads обязателен, иначе один пустой сокет браузера вешает сервер
+    command: gunicorn --bind 0.0.0.0:8000 --worker-class gthread --threads 32 --reload app:app

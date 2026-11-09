@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Вопрос {{ pos }}{% endblock %}
+
+{% block content %}
+<section class="card q-card q-wide rise">
+    <div class="eyebrow">Вопрос {{ pos }} из {{ total }}</div>
+    <h1 class="q-title">{{ question.text }}</h1>
+    {% if question.hint %}<p class="q-hint">{{ question.hint }}</p>{% endif %}
+
+    {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('survey_submit', idx=idx) }}" id="grid-form">
+        <div class="gq" style="--n: {{ question.options|length }}">
+            <!-- шапка видна только на широком экране -->
+            <div class="gq-head" aria-hidden="true">
+                <span></span>
+                {% for opt in question.options %}<span>{{ opt.label }}</span>{% endfor %}
+            </div>
+
+            {% for row in question.rows %}
+            {% set name = question.code ~ "_" ~ row.value %}
+            <div class="gq-row" role="radiogroup" aria-labelledby="gq-{{ row.value }}" style="--i: {{ loop.index0 }}">
+                <div class="gq-brand" id="gq-{{ row.value }}">
+                    <span class="gq-name">{{ row.label }}</span>
+                    {% if row.hint %}<span class="gq-sub">{{ row.hint }}</span>{% endif %}
+                    <span class="gq-ok">{{ icon("check") }}</span>
+                </div>
+                {% for opt in question.options %}
+                <label class="gq-cell">
+                    <input type="radio" name="{{ name }}" value="{{ opt.value }}"
+                           {% if selected[row.value] == opt.value %}checked{% endif %} required>
+                    <span class="gq-dot"></span>
+                    <span class="gq-text">{{ opt.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="nav">
+            <button type="submit" class="btn btn-primary" id="next">
+                Далее {{ icon("arrow") }}
+            </button>
+            {% if has_prev %}
+            <button type="submit" name="action" value="back" class="btn btn-ghost" formnovalidate>{{ icon("back") }} Назад</button>
+            {% endif %}
+        </div>
+        <div class="gq-count" id="gq-count" aria-live="polite"></div>
+    </form>
+</section>
+
+<script>
+(function () {
+    var rows = document.querySelectorAll(".gq-row");
+    var out = document.getElementById("gq-count");
+    function update() {
+        var done = 0;
+        rows.forEach(function (r) { if (r.querySelector("input:checked")) done++; });
+        out.textContent = done < rows.length ? "Отмечено " + done + " из " + rows.length : "Все строки отмечены";
+        out.classList.toggle("is-full", done === rows.length);
+    }
+    document.getElementById("grid-form").addEventListener("change", update);
+    update();
+})();
+</script>
+{% endblock %}

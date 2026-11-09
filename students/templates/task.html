@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "_compare.html" import compare with context %}
+{% block title %}Ситуация {{ pos }}{% endblock %}
+{% block body_class %}is-task{% endblock %}
+{% block wrap_class %}wrap-task{% endblock %}
+
+{% block content %}
+<div class="task rise">
+    <div class="task-top">
+        <div class="eyebrow">Ситуация {{ pos }} из {{ total }}</div>
+        <ol class="dots" aria-hidden="true">
+            {% for i in range(total) %}<li class="{% if i < idx %}is-done{% elif i == idx %}is-now{% endif %}"></li>{% endfor %}
+        </ol>
+    </div>
+
+    <div class="scenario">{{ icon("book") }}<span><b>Ситуация:</b> {{ scenario }}</span></div>
+
+    <h1 class="task-title">Какой сервис вы предпочли бы использовать?</h1>
+
+    {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('task_submit', idx=idx) }}" id="task-form">
+        <input type="hidden" name="dwell_ms" id="dwell_ms" value="0">
+
+        {{ compare(rows) }}
+
+        <div class="task-actions">
+            <span class="task-hint" id="task-hint">Нажмите на колонку, чтобы выбрать сервис</span>
+            <button type="submit" class="btn btn-primary" id="confirm">
+                <span id="confirm-text">Подтвердить выбор</span> {{ icon("arrow") }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById("task-form");
+    var btn = document.getElementById("confirm");
+    var text = document.getElementById("confirm-text");
+    var hint = document.getElementById("task-hint");
+    var labels = {{ column_labels|list|tojson }};
+
+    // кнопка активна только после выбора; без JS работает обычный required
+    btn.disabled = true;
+    form.addEventListener("change", function (e) {
+        if (e.target.name !== "choice") return;
+        btn.disabled = false;
+        text.textContent = "Выбрать: " + labels[e.target.value - 1];
+        hint.textContent = "Можно передумать — нажмите на другую колонку";
+        btn.classList.add("is-ready");
+    });
+
+    // Подгонка под высоту окна на компьютере: если не влезло,
+    // уменьшаем коэффициент --fit, от него зависят вертикальные отступы
+    var root = document.documentElement;
+    function fit() {
+        root.style.setProperty("--fit", "1");
+        if (window.innerWidth < 760) return;
+        var f = 1;
+        while (document.documentElement.scrollHeight > window.innerHeight && f > 0.55) {
+            f -= 0.03;
+            root.style.setProperty("--fit", f.toFixed(2));
+        }
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
+    // активное время на странице: пауза, пока вкладка в фоне
+    var elapsed = 0, last = document.hidden ? null : Date.now();
+    document.addEventListener("visibilitychange", function () {
+        if (document.hidden) { if (last !== null) { elapsed += Date.now() - last; last = null; } }
+        else last = Date.now();
+    });
+    form.addEventListener("submit", function () {
+        if (last !== null) elapsed += Date.now() - last;
+        document.getElementById("dwell_ms").value = elapsed;
+        btn.classList.add("is-sending");
+    });
+})();
+</script>
+{% endblock %}

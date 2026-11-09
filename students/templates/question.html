@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Вопрос {{ pos }}{% endblock %}
+
+{% block content %}
+<section class="card q-card rise">
+    <div class="eyebrow">Вопрос {{ pos }} из {{ total }}</div>
+    <h1 class="q-title">{{ question.text }}</h1>
+    {% if question.hint %}<p class="q-hint">{{ question.hint }}</p>{% endif %}
+
+    {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('survey_submit', idx=idx) }}" class="q-form" id="q-form">
+        <div class="opts" role="radiogroup" aria-label="{{ question.text }}">
+            {% for opt in question.options %}
+                {% if opt.other %}
+                <div class="opt-other">
+                    <label class="opt" style="--i: {{ loop.index0 }}">
+                        <input type="radio" name="value" value="{{ opt.value }}" data-other
+                               {% if selected == opt.value %}checked{% endif %} required>
+                        <span class="opt-key">{{ loop.index }}</span>
+                        <span class="opt-body"><span class="opt-label">{{ opt.label }}</span></span>
+                        <span class="opt-check">{{ icon("check") }}</span>
+                    </label>
+                    <!-- поле рядом с label, а не внутри: клик по нему не переключает выбор -->
+                    <input type="text" name="other_text" class="input other-input"
+                           maxlength="{{ other_max }}" value="{{ other_value or '' }}"
+                           placeholder="{{ opt.other_placeholder or 'Укажите' }}"
+                           aria-label="{{ opt.other_placeholder or 'Укажите' }}">
+                </div>
+                {% else %}
+                <label class="opt" style="--i: {{ loop.index0 }}">
+                    <input type="radio" name="value" value="{{ opt.value }}"
+                           {% if selected == opt.value %}checked{% endif %} required>
+                    <span class="opt-key">{{ loop.index }}</span>
+                    <span class="opt-body">
+                        <span class="opt-label">{{ opt.label }}</span>
+                        {% if opt.hint %}<span class="opt-hint">{{ opt.hint }}</span>{% endif %}
+                    </span>
+                    <span class="opt-check">{{ icon("check") }}</span>
+                </label>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- «Далее» стоит в разметке первым: Enter отправляет именно его,
+             а на экран CSS ставит «Назад» слева -->
+        <div class="nav">
+            <button type="submit" class="btn btn-primary" id="next">Далее {{ icon("arrow") }}</button>
+            {% if has_prev %}
+            <button type="submit" name="action" value="back" class="btn btn-ghost" formnovalidate>{{ icon("back") }} Назад</button>
+            {% endif %}
+        </div>
+    </form>
+    <p class="kbd-tip">Можно отвечать с клавиатуры: цифра — вариант, Enter — далее</p>
+</section>
+
+<script>
+(function () {
+    var form = document.getElementById("q-form");
+    var next = document.getElementById("next");
+    var radios = form.querySelectorAll('input[type="radio"]');
+    var other = form.querySelector(".other-input");
+    var timer = null;
+
+    function syncOther() {
+        if (!other) return;
+        var on = form.querySelector('input[data-other]:checked');
+        other.required = !!on;
+    }
+
+    radios.forEach(function (r) {
+        r.addEventListener("change", function () {
+            syncOther();
+            clearTimeout(timer);
+            if (r.hasAttribute("data-other")) {
+                other.focus();
+                return;
+            }
+            // обычный вариант: короткая анимация и сразу дальше
+            r.closest(".opt").classList.add("is-pop");
+            timer = setTimeout(function () {
+                form.requestSubmit ? form.requestSubmit(next) : form.submit();
+            }, 320);
+        });
+    });
+    syncOther();
+
+    document.addEventListener("keydown", function (e) {
+        if (e.target.tagName === "INPUT" && e.target.type === "text") return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        var n = parseInt(e.key, 10);
+        if (n >= 1 && n <= radios.length) {
+            radios[n - 1].checked = true;
+            radios[n - 1].dispatchEvent(new Event("change"));
+        }
+    });
+})();
+</script>
+{% endblock %}

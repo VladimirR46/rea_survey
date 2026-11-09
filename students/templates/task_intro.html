@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Инструкция{% endblock %}
+
+{% block content %}
+<section class="card intro rise">
+    <div class="eyebrow">Инструкция</div>
+    <h1 class="q-title">Как устроены задания</h1>
+
+    <div class="scenario-card">
+        <span class="scenario-ico">{{ icon("book") }}</span>
+        <div>
+            <div class="scenario-label">Ваша ситуация</div>
+            <p>{{ scenario }}</p>
+        </div>
+    </div>
+
+    <ol class="steps-list">
+        <li>
+            <span class="sl-n">1</span>
+            <p>Вы увидите {{ total }} {{ plural_ru(total, "ситуацию", "ситуации", "ситуаций") }} выбора.
+            В каждой — три гипотетических сервиса: <b>А</b>, <b>Б</b> и <b>В</b>.</p>
+        </li>
+        <li>
+            <span class="sl-n">2</span>
+            <p>Каждая характеристика описана через известный сервис. Например,
+            «Точность ответов: <b>как у ChatGPT</b>» означает, что сервис отвечает
+            так же точно, как, по вашему представлению, ChatGPT. Если вы
+            не пользовались каким-то сервисом, опирайтесь на то, что о нём
+            знаете или слышали.</p>
+        </li>
+        <li>
+            <span class="sl-n">3</span>
+            <p>Выберите сервис, которым вы предпочли бы воспользоваться.
+            Остальные свойства сервисов, не указанные в таблице, считайте
+            одинаковыми. Правильных ответов нет — нам важно именно ваше мнение.</p>
+        </li>
+    </ol>
+
+    <h2 class="sub">Сервисы различаются по шести характеристикам</h2>
+    <div class="attrs">
+        {% for a in attributes %}
+        <div class="attr" style="--i: {{ loop.index0 }}">
+            <span class="attr-ico">{{ icon(a.icon) }}</span>
+            <div>
+                <div class="attr-name">{{ a.name }}</div>
+                <div class="attr-desc">{{ a.description }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{{ url_for('tasks_intro') }}">
+        <div class="nav">
+            <button type="submit" class="btn btn-primary">Посмотреть пример {{ icon("arrow") }}</button>
+            <button type="submit" name="action" value="back" class="btn btn-ghost">{{ icon("back") }} Назад</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
